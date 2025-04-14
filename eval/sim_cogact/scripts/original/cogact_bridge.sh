@@ -14,10 +14,10 @@ export HF_TOKEN=***REMOVED***
 export WANDB_API_KEY=***REMOVED***
 
 MODEL_PATH=/fs-computility/efm/yejinhui/Projects/CogACT/playground/Pretrained_models/CogACT-Base/checkpoints/CogACT-Base.pt
-MODEL_PATH=/fs-computility/efm/yejinhui/Projects/CogACT/playground/Checkpoints/cogact_RP--image_aug/checkpoints/step-020000-epoch-09-loss=0.0465.pt
+MODEL_PATH=/fs-computility/efm/yejinhui/Projects/CogACT/playground/Checkpoints/cogact_RP_bridge_rt_1--image_aug/checkpoints/step-050000-epoch-08-loss=0.0293.pt
 
 
-gpu_id=2
+gpu_id=5
 policy_model=cogact
 ckpt_path=${MODEL_PATH} # CogACT/CogACT-Base CogACT/CogACT-Large CogACT/CogACT-Small
 
