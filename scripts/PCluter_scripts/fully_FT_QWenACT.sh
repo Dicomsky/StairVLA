@@ -16,8 +16,8 @@
 
 # conda activate llavavla310  # 替换为你的环境名
 
-export NCCL_SOCKET_IFNAME=eth0
-export NCCL_IB_HCA=mlx5_0
+export NCCL_SOCKET_IFNAME=bond0
+export NCCL_IB_HCA=mlx5_2,mlx5_3
 
 export GPUS_PER_NODE=8
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
