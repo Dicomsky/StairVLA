@@ -24,13 +24,10 @@ run_id=internVLA_M1
 
 export WANDB_MODE=disabled
 
-
-
 output_dir=${run_root_dir}/${run_id}
 mkdir -p ${output_dir}
 # mv this script to the output dir
 cp $0 ${output_dir}/
-
 
 accelerate launch \
   --config_file InternVLA/config/deepseeds/deepspeed_zero2.yaml \

@@ -408,12 +408,17 @@ class LeRobotSingleDataset(Dataset):
                 with open(steps_path, "rb") as f:
                     cached_data = pickle.load(f)
                 return cached_data["steps"]
-                # # Verify the cached data matches current configuration
-                # if cached_data.get("config_key") == config_key:
-                #     print(f"Loading cached steps from {steps_path}")
-                #     return cached_data["steps"]
-                # else:
-                    # print("Cached steps configuration mismatch, recomputing...")
+
+            else:
+                steps_filename =  "steps_418e54781335.pkl"
+
+                steps_path = self.dataset_path / "meta" / steps_filename
+        
+                with open(steps_path, "rb") as f:
+                    cached_data = pickle.load(f)
+                return cached_data["steps"]
+
+
         except (FileNotFoundError, pickle.PickleError, KeyError) as e:
             print(f"Failed to load cached steps: {e}")
             print("Computing steps from scratch...")
