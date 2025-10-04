@@ -22,6 +22,10 @@ VIDEO_TOKEN_INDEX = 151656
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_VIDEO_TOKEN = "<video>"
 
+_ACTION_TOKEN_MIN = 151665 # how can we know this range? --> we has other way for this, but is slower see qwenhelix branch
+_ACTION_TOKEN_MAX = 153712 # here only for fast_tokenizer, see InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+
+
 import torch.nn as nn
 
 
@@ -151,41 +155,18 @@ class _QWen_VL_Interface(nn.Module):
 
     def generate(
         self,
-        input_ids: torch.LongTensor,
-        attention_mask: torch.Tensor = None,
-        pixel_values: torch.FloatTensor = None,
-        max_new_tokens: int = 128,
-        output_hidden_states: bool = True,
-        return_dict_in_generate: bool = True,
         **kwargs,
     ):
         """
         High-level generation interface (auto-regressive decoding), optionally vision-conditioned.
 
         Args:
-            input_ids (LongTensor): [B, T] prompt tokens.
-            attention_mask (Tensor | None): [B, T] mask (0 = pad).
-            pixel_values (FloatTensor | None): Optional vision inputs aligned with prompts.
-            max_new_tokens (int): Maximum number of new tokens to sample/generate.
-            output_hidden_states (bool): Whether to keep hidden states during generation.
-            return_dict_in_generate (bool): Return structured GenerateOutput if True.
-            **kwargs: Passed to model.generate (e.g., temperature, top_p, do_sample, eos_token_id, repetition_penalty).
-
+            **kwargs: fully follow raw model.generate() signature.
         Returns:
             GenerateOutput | Model-dependent generation return.
-
-        Notes:
-            - Uses autocast(float16); relies on attribute enable_mixed_precision_training.
-            - For iterative dialogue, caller manages past_key_values externally.
         """
-        with torch.autocast("cuda", enabled=self.enable_mixed_precision_training, dtype=torch.float16):
+        with torch.autocast("cuda", dtype=torch.float16):
             generation_output = self.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                pixel_values=pixel_values,
-                max_new_tokens=max_new_tokens,
-                output_hidden_states=output_hidden_states,
-                return_dict_in_generate=return_dict_in_generate,
                 **kwargs,
             )
         return generation_output
@@ -282,8 +263,8 @@ class _QWen_VL_Interface(nn.Module):
 
         # if solutions, mask out the solution tokens in labels
         if solutions is not None:
-            action_token_min = 151665 # how can we know this range? --> we has other way for this, but is slower see qwenhelix branch
-            action_token_max = 153712 # here only for fast_tokenizer, see InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+            action_token_min = _ACTION_TOKEN_MIN # how can we know this range? --> we has other way for this, but is slower see qwenhelix branch
+            action_token_max = _ACTION_TOKEN_MAX # here only for fast_tokenizer, see InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
             labels = batch_input['input_ids'].clone()
             # For each sequence in the batch, find the first occurrence of an action token.
             for i in range(labels.size(0)):
@@ -305,71 +286,6 @@ class _QWen_VL_Interface(nn.Module):
 
         return batch_input.to(self.model.device)
 
-    def build_qwenvl_train_inputs(self, images, instructions, solutions=None):
-        """
-        Build Qwen2-VL compatible inputs for a batch of multi-camera images.
-
-        Args:
-            images: B*list of PIL (muilti-view), image format: RGB, value in [0, 255]
-            processor: Qwen2.5 VL processor (AutoProcessor.from_pretrained)
-            instructions: Text prompt to use for each instruction
-            device: Target device (default: "cuda")
-
-        Returns:
-            inputs: dict with input_ids, attention_mask, pixel_values, etc., ready for model.generate or model(...)
-        """
-
-        messages = []
-        assert len(images) == len(instructions), "Images and instructions must have the same length"
-        
-        # build conversation messages
-        for imgs, instruction in zip(images, instructions):
-
-            content = [{"type": "image", "image": img} for img in imgs] # 其实是支持多图的
-            CoT_prompt = self.config.datasets.vla_data.get("CoT_prompt", None)
-            if CoT_prompt:
-                prompt = CoT_prompt.replace("{instruction}", instruction)
-            else:
-                prompt = f"Your task is {instruction} where is the pick object and where is the place object. locate the bbox of pick and place in json" # old prompt for onging ckpt
-
-            content.append({"type": "text", "text": prompt})
-            msg = [{"role": "user", "content": content}]
-            if solutions is not None: #@DEBUG TODO 检查和 generation 的处理是否完全一致，TODO 提高推理效率
-                # add solution if provided
-                solution = solutions[len(messages)]
-                solution_content = [{"type": "text", "text": f": {solution}"}]
-                msg.append({"role": "assistant", "content": solution_content})
-
-            messages.append(msg)
-    
-        images, videos = process_vision_info(messages) # 这样可以处理不同 图片的复杂情况
-
-        image_inputs = {}
-        image_grid_thw = None
-        video_inputs = {}
-        video_grid_thw = None
-
-        if images is not None: # TODO 看一下这里是否要并行处理，或者直接
-            image_inputs = self.processor.image_processor(images=images, return_tensors="pt") # 这里是直接处理成 tensor 的
-            image_grid_thw = copy.deepcopy(image_inputs["image_grid_thw"]) 
-            image_grid_thw_merged = [
-                merged_thw.prod() // self.processor.image_processor.merge_size**2
-                for merged_thw in image_grid_thw
-            ]
-            grid_thw_merged = image_grid_thw_merged # 目前还不能image, video 交错
-            text_inputs = preprocess_qwen_2_visual( # 对 官方代码进行了修改，sources --> massage， 支持 batch padding
-                messages, self.processor.tokenizer, grid_thw=grid_thw_merged, visual_type="image"
-            ) # 拿到 input_ids and SFT labels
-
-        elif videos is not None:
-            RuntimeWarning("Video inputs are not yet supported in this interface. 还不确定这个框架是否支持这样的混合输出.")
-            pass
-        else:
-            ResourceWarning("No visual inputs provided. 还不确定这个框架是否支持这样的混合输出.")
-            pass
-
-        inputs = BatchFeature(data={**text_inputs, **image_inputs, **video_inputs}, tensor_type="pt")
-        return inputs.to(self.model.device)
 
 
 def get_qwen2_5_interface(config=None, **kwargs):

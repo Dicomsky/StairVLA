@@ -14,14 +14,19 @@ import os
 import numpy as np
 from transformers import AutoProcessor
 
+from InternVLA.model.modules.vlm.QWen2_5 import _ACTION_TOKEN_MAX, _ACTION_TOKEN_MIN
+
 class Fast_Action_Tokenizer(nn.Module):
     """One MLP ResNet block with a residual connection."""
-    def __init__(self, fast_tokenizer_name="physical-intelligence/fast"):
+    def __init__(self, fast_tokenizer_name="playground/Pretrained_models/fast"):
         super().__init__()
         
         self.fast_tokenizer = AutoProcessor.from_pretrained(
             fast_tokenizer_name, trust_remote_code=True
         )
+
+        self._ACTION_TOKEN_MIN = _ACTION_TOKEN_MIN
+        self._ACTION_TOKEN_MAX = _ACTION_TOKEN_MAX
 
     def encoder_action2vlmtoken(self, raw_actions):
         # x: (batch_size, chunck, dim)
@@ -31,15 +36,18 @@ class Fast_Action_Tokenizer(nn.Module):
         batch_vlm_actions = [self.map_fast_token_to_vlm_action(fast_tokens) for fast_tokens in batch_fast_tokens]
         return batch_vlm_actions # List[str]
     
-    def decoder_action(self, pred_actions):
+    def decoder_action(self, generated_ids):
         # x: (batch_size, chunck, dim)
+        pred_actions = self.fast_tokenizer.decode([generated_ids - self._ACTION_TOKEN_MIN])
         return pred_actions
     
     def map_fast_token_to_vlm_action(self, tokens) -> str:
         """Maps fast action tokens to the VLM action format.
         Action token 0 is mapped to the string <robot_action_0>  ... and so on 
         """
-        return ''.join([f"<robot_action_{token}>" for token in tokens]) #@Jinhui, I'm not sure why we using this
+        return ''.join([f"<robot_action_{token}>" for token in tokens]) # you should add this to VLM as special tokens, 
+        # and set the 
+        #see /mnt/petrelfs/yejinhui/Projects/llavavla/InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 
     def fit_tokenizer_on_datasets(self, action_dataset, datasets_path="<your_local_path>", ):
         # 如果 datasets_path 存在， 直接读取
@@ -70,3 +78,36 @@ def get_action_model(config=None):
     action_model = Fast_Action_Tokenizer()
 
     return action_model
+
+
+def start_debugpy_once():
+    """start debugpy once"""
+    import debugpy
+    if getattr(start_debugpy_once, "_started", False):
+        return
+    debugpy.listen(("0.0.0.0", 10092))
+    print("🔍 Waiting for VSCode attach on 0.0.0.0:10092 ...")
+    debugpy.wait_for_client()
+    start_debugpy_once._started = True
+
+if __name__ == "__main__":
+
+    start_debugpy_once()
+    fast_tokenizer_name = "physical-intelligence/fast"
+    tokenizer = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
+    raw_actions = [np.random.randn(16, 7), np.random.randn(16, 7)]
+    vlm_tokens = tokenizer.encoder_action2vlmtoken(raw_actions)
+    print(vlm_tokens)
+    pred_actions = tokenizer.decoder_action(np.array([12,3,45,87]))
+    print(pred_actions)
+
+    fast_tokenizer_name = "/mnt/petrelfs/yejinhui/Projects/llavavla/playground/Pretrained_models/fast"
+    tokenizer2 = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
+    raw_actions = [np.random.randn(16, 7), np.random.randn(16, 7)]
+    vlm_tokens = tokenizer2.encoder_action2vlmtoken(raw_actions)
+    print(vlm_tokens)
+    pred_actions = tokenizer2.decoder_action(np.array([12,3,45,87]))
+    print(pred_actions)
+
+
+

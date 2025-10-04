@@ -23,6 +23,9 @@ def build_framework(cfg):
     elif cfg.framework.framework_py == "QwenOFT":
         from InternVLA.model.framework.QwenOFT import build_model_framework
         return build_model_framework(cfg)
+    elif cfg.framework.framework_py == "QwenFast":
+        from InternVLA.model.framework.QwenFast import build_model_framework
+        return build_model_framework(cfg)
 
     raise NotImplementedError(f"Framework {cfg.framework.framework_py} is not implemented.")
 
