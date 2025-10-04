@@ -39,9 +39,6 @@ def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here on
         from InternVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
         vla_dataset_cfg = cfg.datasets.vla_data
 
-        data_root_dir = vla_dataset_cfg.data_root_dir
-        data_mix = vla_dataset_cfg.data_mix
-
         vla_dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)
         
         vla_train_dataloader = DataLoader(

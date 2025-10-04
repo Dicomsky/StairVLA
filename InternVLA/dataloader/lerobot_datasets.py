@@ -102,7 +102,7 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(
         dataset,
         batch_size=16,
-        num_workers=16, # For Debug
+        num_workers=1, # For Debug
         collate_fn=collate_fn,
     )
 

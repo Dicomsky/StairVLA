@@ -19,7 +19,7 @@ from typing import List
 
 from pathlib import Path
 from typing import Dict, List
-
+from transformers import AutoConfig, AutoModel, PretrainedConfig, PreTrainedModel
 import numpy as np
 from InternVLA.model.tools import auto_get_trainable_modules
 
@@ -30,7 +30,10 @@ from InternVLA.model.framework.share_tools import dict_to_namespace
 logger = initialize_overwatch(__name__)
 
 
-class baseframework(nn.Module):
+# PreTrainedModel, AutoModel, PretrainedConfig is good, find sometime
+# TODO @JinhuiYE find sometime to merge yaml config with transformer config
+
+class baseframework(PreTrainedModel):
     """
     Lightweight base class for higher-level VLA model assemblies.
     Subclasses are expected to:
@@ -41,11 +44,13 @@ class baseframework(nn.Module):
 
     def __init__(
         self,
+        hf_config = PretrainedConfig()
     ) -> None:
         """
         Initialize base nn.Module. Subclasses add components.
         """
-        super().__init__()
+        
+        super().__init__(hf_config)
 
     @classmethod
     def from_pretrained(

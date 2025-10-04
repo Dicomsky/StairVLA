@@ -203,3 +203,5 @@ test_image.jpg.npy
 test_image.jpg
 scripts/*
 
+scripts/run_scripts/sum2cluter.sh
+

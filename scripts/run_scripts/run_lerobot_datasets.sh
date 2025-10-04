@@ -30,13 +30,13 @@ mkdir -p ${output_dir}
 cp $0 ${output_dir}/
 
 accelerate launch \
-  --config_file InternVLA/config/deepseeds/deepspeed_zero2.yaml \
+  --config_file InternVLA/config/deepseeds/deepspeed_zero2.yaml  \
   --num_processes 8 \
   InternVLA/training/train_internvla.py \
   --config_yaml ./InternVLA/config/training/internvla_cotrain_oxe.yaml \
   --framework.framework_py ${Framework_name} \
   --framework.qwenvl.base_vlm ${base_vlm} \
-  --datasets.vla_data.data_root_dir ${oxe_data_root}\
+  --datasets.vla_data.data_root_dir ${oxe_data_root} \
   --datasets.vla_data.data_mix ${data_mix} \
   --datasets.vla_data.per_device_batch_size 16 \
   --trainer.freeze_modules ${freeze_module_list} \
@@ -46,8 +46,8 @@ accelerate launch \
   --trainer.learning_rate.base 4e-5 \
   --run_root_dir ${run_root_dir} \
   --run_id ${run_id} \
-  --wandb_project your_wandb_project_name \
-  --wandb_entity your_wandb_id \
+  --wandb_project InternVLA-M1 \
+  --wandb_entity jinhuiye \
   # --is_debug True
 
 

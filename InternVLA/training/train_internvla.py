@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Tuple
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+import time
 
 # Third-Party Libraries
 import torch
@@ -274,21 +275,35 @@ class VLATrainer(TrainerUtils):
         # main training loop
         while self.completed_steps < self.config.trainer.max_train_steps:
             # get data batch
+            t_start_data = time.perf_counter()
             batch_vla = self._get_next_batch()
+            t_end_data = time.perf_counter()
 
             # execute training step
+            t_start_model = time.perf_counter()
             step_metrics = self._train_step(batch_vla)
+            t_end_model = time.perf_counter()
 
             # update progress
             if self.accelerator.sync_gradients:
                 progress_bar.update(1)
                 self.completed_steps += 1
+            
+            if self.accelerator.is_local_main_process:
+                progress_bar.set_postfix(
+                        {
+                            "data_times": f"{t_end_data - t_start_data:.3f}",
+                            "model_times": f"{t_end_model - t_start_model:.3f}",
+                        }
+                    )
 
             # evaluate model
             if self.completed_steps % self.config.trainer.eval_interval == 0:
                 step_metrics = self.eval_action_model(step_metrics)
 
             # record metrics
+            step_metrics["data_time"] = t_end_data - t_start_data
+            step_metrics["model_time"] = t_end_model - t_start_model
             self._log_metrics(step_metrics)
 
             # save checkpoint
