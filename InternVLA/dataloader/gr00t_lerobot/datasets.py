@@ -396,9 +396,10 @@ class LeRobotSingleDataset(Dataset):
         
         # Create a unique filename based on config_key
         steps_filename = f"steps_{config_key}.pkl"
-        # @DUG 
+        # @BUG
         # fast get static steps @fangjing --> don't use hash to dynamic sample
         steps_filename =  "steps_data_index.pkl"
+        steps_filename = "steps_332420bad1ab.pkl"
 
         steps_path = self.dataset_path / "meta" / steps_filename
         
@@ -409,6 +410,7 @@ class LeRobotSingleDataset(Dataset):
                     cached_data = pickle.load(f)
                 return cached_data["steps"]
             else:
+                steps_filename = "steps_2d5a34b904d2.pkl"
                 steps_path = self.dataset_path / "meta" / steps_filename
         
                 with open(steps_path, "rb") as f:

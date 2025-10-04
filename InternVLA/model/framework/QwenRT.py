@@ -27,11 +27,11 @@ IGNORE_INDEX = -100
 
 from InternVLA.model.framework.base_framework import baseframework
 from InternVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
-from InternVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
+from InternVLA.model.modules.action_model.fast_ActionHeader import get_action_model
 from InternVLA.training.trainer_utils.metrics import resize_images
 
 
-class Qwenvl_OFT(baseframework):
+class Qwenvl_RT(baseframework):
     """
     Multimodal vision-language-action model.
 
@@ -59,18 +59,13 @@ class Qwenvl_OFT(baseframework):
         super().__init__()
         self.config = config
         self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
-        self.action_model = get_action_model(config=self.config)  # 修复后续引用
+        self.action_model = get_action_model(config=self.config)
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
         self.past_action_window_size = config.framework.action_model.past_action_window_size
         self.chunk_len = self.past_action_window_size + 1 + self.future_action_window_size
         self.hidden_dim = config.framework.action_model.action_hidden_dim
         
-        self.action_token = "🔍" # TODO also can add spacail token to Qwen, but too complex
-        self.action_token_id = self.qwen_vl_interface.processor.tokenizer("🔍", add_special_tokens=False)["input_ids"][0]
-
-        # L1 损失
-        self.l1_loss = nn.L1Loss()
 
     def forward(
         self,
@@ -78,7 +73,7 @@ class Qwenvl_OFT(baseframework):
         **kwargs,
     ) -> Tuple:
         """
-        训练前向：直接回归未来动作（无扩散）。
+        训练前向：直接next token prediction 预测未来动作（无扩散）。
 
         Flow:
           1. Build QwenVL inputs (images + instruction tokens)
@@ -100,40 +95,27 @@ class Qwenvl_OFT(baseframework):
         instructions = [example["lang"] for example in examples]  # [B, str]
         actions = [example["action"] for example in examples]  # label [B， len, 7]
         
-        # step 0: add special action token to instruction
-        action_tokens = self.action_token* self.chunk_len #can't add " " between two tokens, otherwise will be tokenized to multiple tokens
-        prompt_suffix = f" Please predict the next {self.chunk_len} robot actions: <action>{action_tokens}<action>."
-        instructions = [instruction + prompt_suffix for instruction in instructions]
+        # step 0: map_raw_action_to_vlm_action
+        vlm_action_tokens = self.action_model.encoder_action2vlmtoken(actions)  # List[str]
+
 
         # Step 1: QWenVL input format
-        qwen_inputs = self.qwen_vl_interface.build_qwenvl_inputs(images=batch_images, instructions=instructions)
+        qwen_inputs = self.qwen_vl_interface.build_qwenvl_train_inputs(images=batch_images, instructions=instructions, solutions=vlm_action_tokens)
+        qwen_inputs_v1 = self.qwen_vl_interface.build_qwenvl_inputs(images=batch_images, instructions=instructions, solutions=vlm_action_tokens)
+        
         with torch.autocast("cuda", dtype=torch.bfloat16):
             qwenvl_outputs = self.qwen_vl_interface(
                 **qwen_inputs,
                 output_attentions=False,
-                output_hidden_states=True,
+                output_hidden_states=False,
                 return_dict=True,
             )
-            # last_hidden_state: [B, seq_len, H]
-            last_hidden = qwenvl_outputs.hidden_states[-1]   # [B, L, H]
+        
+        vlm_action_loss = qwenvl_outputs.loss
+        if vlm_action_loss is None or torch.isnan(vlm_action_loss): 
+            vlm_action_loss = torch.tensor(0.0, device=self.qwen_vl_interface.model.device)
 
-        # Step 4: Action Expert Forward and Loss
-        with torch.autocast("cuda", dtype=torch.float32):
-            # 提取动作 token embedding 作为动作预测查询
-            input_ids = qwen_inputs.get("input_ids", None)
-            action_queries = self._gather_action_token_embeddings(last_hidden, input_ids, action_token_id=self.action_token_id)  # [B, chunk_len, H]
-            pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
-
-            # 标签对齐：取最后 chunk_len 段
-            actions = torch.tensor(
-                np.array(actions), device=pred_actions.device, dtype=pred_actions.dtype
-            )  # [B, T_full, action_dim]
-            actions_target = actions[:, -(self.future_action_window_size+1):, :]  # (B, chunk_len, action_dim)
-
-            # 计算 L1 损失
-            action_loss = self.l1_loss(pred_actions, actions_target)
-
-        return {"action_loss": action_loss}
+        return {"action_loss": vlm_action_loss}
 
     @torch.inference_mode()
     def predict_action(
@@ -165,33 +147,20 @@ class Qwenvl_OFT(baseframework):
         train_obs_image_size = getattr(self.config.datasets.vla_data, "image_size", None)
         if train_obs_image_size:
             batch_images = resize_images(batch_images, target_size=train_obs_image_size)
-    
-        # step 0: add special action token to instruction
-        action_tokens = self.action_token* self.chunk_len #can't add " " between two tokens, otherwise will be tokenized to multiple tokens
-        prompt_suffix = f" Please predict the next {self.chunk_len} robot actions: <action>{action_tokens}<action>."
-        instructions = [instruction + prompt_suffix for instruction in instructions]
+        instructions = [instruction for instruction in instructions]
+
 
         # Step 1: QWenVL input format
         qwen_inputs = self.qwen_vl_interface.build_qwenvl_inputs(images=batch_images, instructions=instructions)
+
         with torch.autocast("cuda", dtype=torch.bfloat16):
-            qwenvl_outputs = self.qwen_vl_interface(
+            generated_ids = self.qwen_vl_interface.generate(
                 **qwen_inputs,
-                output_attentions=False,
-                output_hidden_states=True,
-                return_dict=True,
             )
-            # last_hidden_state: [B, seq_len, H]
-            last_hidden = qwenvl_outputs.hidden_states[-1]   # [B, L, H]
 
-        # Step 4: Action Expert Forward and Loss
-        with torch.autocast("cuda", dtype=torch.float32):
-            # 提取动作 token embedding 作为动作预测查询
-            input_ids = qwen_inputs.get("input_ids", None)
-            action_queries = self._gather_action_token_embeddings(last_hidden, input_ids, action_token_id=self.action_token_id)  # [B, chunk_len, H]
-            pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
-
-        normalized_actions = pred_actions.detach().cpu().numpy()
-        return {"normalized_actions": normalized_actions}
+        # decoder vlm_action to continue actions
+        
+        return {"normalized_actions": 1}
 
     def _gather_action_token_embeddings(
         self,
@@ -246,11 +215,11 @@ class Qwenvl_OFT(baseframework):
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
 
-def build_model_framework(config: dict = {}) -> Qwenvl_OFT:
+def build_model_framework(config: dict = {}) -> Qwenvl_RT:
     """
     工厂方法：返回简化版 Qwenvl_OFT
     """
-    model = Qwenvl_OFT(config=config)
+    model = Qwenvl_RT(config=config)
     return model
 
 
@@ -266,7 +235,9 @@ if __name__ == "__main__":
 
     config_yaml = "InternVLA/config/training/internvla_cotrain_oxe.yaml"
     cfg = OmegaConf.load(config_yaml)
-    cfg.framework.action_model.action_hidden_dim = 2048
+    cfg.framework.qwenvl.base_vlm = "playground/Pretrained_models/nora"
+
+    cfg.framework.action_model.action_hidden_dim 
     # try get model
     model = build_model_framework(cfg)
     print(model)

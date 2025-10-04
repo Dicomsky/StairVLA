@@ -190,7 +190,7 @@ class _QWen_VL_Interface(nn.Module):
             )
         return generation_output
 
-    def build_qwenvl_inputs(self, images, instructions, **kwargs):
+    def build_qwenvl_inputs(self, images, instructions, solutions=None, **kwargs):
         """
         Construct and tokenize multimodal chat-style inputs for Qwen2.5-VL (batched).
 
@@ -265,6 +265,10 @@ class _QWen_VL_Interface(nn.Module):
 
             content.append({"type": "text", "text": prompt})
             msg = [{"role": "user", "content": content}]
+
+            if solutions is not None:
+                solution = solutions[len(messages)]
+                msg.append({"role": "assistant", "content": [{"type": "text", "text": solution}]})
             messages.append(msg)
 
         # Prepare text prompts using processor
@@ -273,8 +277,98 @@ class _QWen_VL_Interface(nn.Module):
 
         # image_inputs = list of PIL
         image_inputs, video_inputs = process_vision_info(messages)
-        inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+        batch_input = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
+
+        # if solutions, mask out the solution tokens in labels
+        if solutions is not None:
+            action_token_min = 151665 # how can we know this range? --> we has other way for this, but is slower see qwenhelix branch
+            action_token_max = 153712 # here only for fast_tokenizer, see InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+            labels = batch_input['input_ids'].clone()
+            # For each sequence in the batch, find the first occurrence of an action token.
+            for i in range(labels.size(0)):
+                seq = labels[i]
+                # Create a mask for tokens within the action token range.
+                mask_seq = (seq >= action_token_min) & (seq <= action_token_max)
+                nonzero_indices = torch.nonzero(mask_seq, as_tuple=False)
+                if nonzero_indices.numel() > 0:
+                    first_action_index = nonzero_indices[0].item()
+                    # Mask out all tokens before the first action token.
+                    seq[:first_action_index] = IGNORE_INDEX
+                else:
+                    # If no action token is found, mask the entire sequence.
+                    seq[:] = IGNORE_INDEX
+                    RuntimeWarning (f"action token are on in yout tokenizer, plz see InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md.")
+            
+            labels[labels == self.processor.tokenizer.pad_token_id] = -100 ## mask out pad tokens as well
+            batch_input['labels'] = labels
+
+        return batch_input.to(self.model.device)
+
+    def build_qwenvl_train_inputs(self, images, instructions, solutions=None):
+        """
+        Build Qwen2-VL compatible inputs for a batch of multi-camera images.
+
+        Args:
+            images: B*list of PIL (muilti-view), image format: RGB, value in [0, 255]
+            processor: Qwen2.5 VL processor (AutoProcessor.from_pretrained)
+            instructions: Text prompt to use for each instruction
+            device: Target device (default: "cuda")
+
+        Returns:
+            inputs: dict with input_ids, attention_mask, pixel_values, etc., ready for model.generate or model(...)
+        """
+
+        messages = []
+        assert len(images) == len(instructions), "Images and instructions must have the same length"
+        
+        # build conversation messages
+        for imgs, instruction in zip(images, instructions):
+
+            content = [{"type": "image", "image": img} for img in imgs] # 其实是支持多图的
+            CoT_prompt = self.config.datasets.vla_data.get("CoT_prompt", None)
+            if CoT_prompt:
+                prompt = CoT_prompt.replace("{instruction}", instruction)
+            else:
+                prompt = f"Your task is {instruction} where is the pick object and where is the place object. locate the bbox of pick and place in json" # old prompt for onging ckpt
+
+            content.append({"type": "text", "text": prompt})
+            msg = [{"role": "user", "content": content}]
+            if solutions is not None: #@DEBUG TODO 检查和 generation 的处理是否完全一致，TODO 提高推理效率
+                # add solution if provided
+                solution = solutions[len(messages)]
+                solution_content = [{"type": "text", "text": f": {solution}"}]
+                msg.append({"role": "assistant", "content": solution_content})
+
+            messages.append(msg)
+    
+        images, videos = process_vision_info(messages) # 这样可以处理不同 图片的复杂情况
+
+        image_inputs = {}
+        image_grid_thw = None
+        video_inputs = {}
+        video_grid_thw = None
+
+        if images is not None: # TODO 看一下这里是否要并行处理，或者直接
+            image_inputs = self.processor.image_processor(images=images, return_tensors="pt") # 这里是直接处理成 tensor 的
+            image_grid_thw = copy.deepcopy(image_inputs["image_grid_thw"]) 
+            image_grid_thw_merged = [
+                merged_thw.prod() // self.processor.image_processor.merge_size**2
+                for merged_thw in image_grid_thw
+            ]
+            grid_thw_merged = image_grid_thw_merged # 目前还不能image, video 交错
+            text_inputs = preprocess_qwen_2_visual( # 对 官方代码进行了修改，sources --> massage， 支持 batch padding
+                messages, self.processor.tokenizer, grid_thw=grid_thw_merged, visual_type="image"
+            ) # 拿到 input_ids and SFT labels
+
+        elif videos is not None:
+            RuntimeWarning("Video inputs are not yet supported in this interface. 还不确定这个框架是否支持这样的混合输出.")
+            pass
+        else:
+            ResourceWarning("No visual inputs provided. 还不确定这个框架是否支持这样的混合输出.")
+            pass
+
+        inputs = BatchFeature(data={**text_inputs, **image_inputs, **video_inputs}, tensor_type="pt")
         return inputs.to(self.model.device)
 
 
@@ -309,6 +403,149 @@ def get_qwen2_5_interface(config=None, **kwargs):
     model = _QWen_VL_Interface(config=config)
 
     return model
+
+
+
+def messages_to_sources(batch_messages):
+    """
+    将 batch 格式的 messages 转换为 sources 格式，支持多模态（image/text）。
+    
+    Args:
+        batch_messages: List[List[Dict]]，每个样本是一组 message 对话
+
+    Returns:
+        List[List[Dict]]，每个样本的 source 对话
+    """
+    batch_sources = []
+
+    for messages in batch_messages:
+        source = []
+        for msg in messages:
+            role = msg["role"]
+            segments = msg["content"]
+
+            parts = []
+            for seg in segments:
+                if seg["type"] == "text":
+                    parts.append(seg["text"])
+                elif seg["type"] == "image":
+                    parts.append(DEFAULT_IMAGE_TOKEN) # VIDEO 还不支持
+                else:
+                    raise ValueError(f"Unsupported content type: {seg['type']}")
+
+            content = "\n".join(parts)
+            source.append({"from": "human" if role == "user" else "gpt", "value": content})
+
+        batch_sources.append(source)
+
+    return batch_sources
+
+def preprocess_qwen_2_visual(
+    messages,
+    tokenizer: transformers.PreTrainedTokenizer,
+    grid_thw: List = [],
+    visual_type: str = "image",
+) -> Dict:
+    # message --> sources json
+    pass
+    
+
+    sources = messages_to_sources(messages)  # 转换为 source 格式
+    # torch.distributed.barrier()
+    # 复用 QWenvl 代码
+    roles = {"human": "user", "gpt": "assistant"}
+    system_message = "You are a helpful assistant."
+    if visual_type not in ["image", "video"]:
+        raise ValueError("visual_type must be either 'image' or 'video'")
+    
+    # tokenizer = copy.deepcopy(tokenizer)
+    chat_template = "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
+    tokenizer.chat_template = chat_template
+
+    visual_replicate_index = 0
+    input_ids, targets = [], []
+    action_obs_mask = [] # 记录那些token 是obs 可以看到的 --> 传递给 Q-Former # TODO 看一下是否有更好的实现方式
+    for i, source in enumerate(sources):
+        try:
+            if roles[source[0]["from"]] != roles["human"]:
+                source = source[1:]
+        except:
+            print(sources)
+
+        input_id, target = [], []
+
+        input_id += tokenizer.apply_chat_template(
+            [{"role": "system", "content": system_message}]
+        )
+        target += [IGNORE_INDEX] * len(input_id)
+
+        for conv in source:
+            try:
+                role = conv["role"]
+                content = conv["content"]
+            except:
+                role = conv["from"]
+                content = conv["value"]
+
+            role = roles.get(role, role)
+            if role == "user":
+                visual_tag = f"<{visual_type}>"
+                if visual_tag in content:
+                    parts = content.split(visual_tag)
+                    new_parts = []
+                    for i in range(len(parts) - 1):
+                        new_parts.append(parts[i])
+                        replacement = (
+                            "<|vision_start|>"
+                            + f"<|{visual_type}_pad|>"
+                            * grid_thw[visual_replicate_index]
+                            + "<|vision_end|>"
+                        )
+                        new_parts.append(replacement)
+                        visual_replicate_index += 1
+                    new_parts.append(parts[-1])
+                    content = "".join(new_parts)
+
+            conv = [{"role": role, "content": content}]
+            encode_id = tokenizer.apply_chat_template(conv)
+            input_id += encode_id
+            if role in ["user", "system"]:
+                target += [IGNORE_INDEX] * len(encode_id)
+            else:
+                target_mask = encode_id.copy()
+                target_mask[:3] = [IGNORE_INDEX] * 3
+                target += target_mask
+
+        assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
+        input_ids.append(input_id)
+        targets.append(target) # TODO 看一下是如何处理结束符号的 @JinhuiYE
+
+
+    # TODO Batch padding 
+    # TODO 不建议在这里执行padding
+    
+    # Padding input_ids 和 targets
+    input_ids = pad_sequence(
+        [torch.tensor(ids, dtype=torch.long) for ids in input_ids],
+        batch_first=True,
+        padding_value=tokenizer.pad_token_id,
+        padding_side=tokenizer.padding_side
+    )
+    targets = pad_sequence(
+        [torch.tensor(tgt, dtype=torch.long) for tgt in targets],
+        batch_first=True,
+        padding_value=IGNORE_INDEX,
+        padding_side=tokenizer.padding_side
+    )
+
+    # 构建 attention_mask：非 pad 的位置为 1，pad 的为 0
+    attention_mask = (input_ids != tokenizer.pad_token_id).long()
+    
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+        attention_mask=attention_mask,
+    )
 
 
 if __name__ == "__main__":
