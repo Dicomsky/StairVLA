@@ -1,12 +1,17 @@
 """
-Qwenvl OFT framework:
-Vision-Language-Action diffusion model integrating:
-  - Qwen2.5 vision-language backbone
-  - learnable raw action token + positional embeddings for action sequences len = action chunk
-  - DiT diffusion head for future action sequence prediction
-Primary goal: predict continuous future actions special token conditioned on multi-view images + instruction.
-"""
+Qwen-OFT Framework
 
+A lightweight implementation that uses an action special token to parallelly predict continuous actions
+conditioned on multi-view images plus a language instruction (shares parameters with the VLM).
+
+Key Points:
+  - Qwen2.5 vision-language backbone
+  - Injects an action special token into the VLM
+  - Continuous action prediction via L1 regression over the action special token hidden states
+
+Note: How to add special tokens to Qwen2.5:
+  See /InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+"""
 from typing import List
 from tqdm import tqdm
 from typing import List, Optional, Tuple
@@ -15,7 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from PIL import Image
-from qwen_vl_utils import process_vision_info
+
 
 
 from InternVLA.training.trainer_utils import initialize_overwatch

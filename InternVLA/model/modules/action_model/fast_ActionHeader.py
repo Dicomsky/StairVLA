@@ -37,7 +37,8 @@ class Fast_Action_Tokenizer(nn.Module):
         return batch_vlm_actions # List[str]
     
     def decoder_action(self, generated_ids):
-        # x: (batch_size, chunck, dim)
+        # api https://huggingface.co/physical-intelligence/fast
+        # return: (batch_size, chunck, dim)
         pred_actions = self.fast_tokenizer.decode([generated_ids - self._ACTION_TOKEN_MIN])
         return pred_actions
     
@@ -93,21 +94,27 @@ def start_debugpy_once():
 if __name__ == "__main__":
 
     start_debugpy_once()
-    fast_tokenizer_name = "physical-intelligence/fast"
-    tokenizer = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
-    raw_actions = [np.random.randn(16, 7), np.random.randn(16, 7)]
-    vlm_tokens = tokenizer.encoder_action2vlmtoken(raw_actions)
-    print(vlm_tokens)
-    pred_actions = tokenizer.decoder_action(np.array([12,3,45,87]))
-    print(pred_actions)
 
     fast_tokenizer_name = "/mnt/petrelfs/yejinhui/Projects/llavavla/playground/Pretrained_models/fast"
-    tokenizer2 = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
+    fast_tokenizer = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
     raw_actions = [np.random.randn(16, 7), np.random.randn(16, 7)]
-    vlm_tokens = tokenizer2.encoder_action2vlmtoken(raw_actions)
+
+    # Load the tokenizer from the Hugging Face hub
+    tokenizer = AutoProcessor.from_pretrained(fast_tokenizer_name, trust_remote_code=True)
+
+    # basic test
+    # Tokenize & decode action chunks (we use dummy data here)
+    action_data = np.random.rand(2, 16, 7)    # one batch of action chunks
+    tokens = tokenizer(action_data)              # tokens = list[int]
+    decoded_actions = tokenizer.decode(tokens)
+
+    # self func test
+    vlm_tokens = fast_tokenizer.encoder_action2vlmtoken(raw_actions)
     print(vlm_tokens)
-    pred_actions = tokenizer2.decoder_action(np.array([12,3,45,87]))
+    pred_actions = fast_tokenizer.decoder_action(np.array([12,3,45,87]))
     print(pred_actions)
+
+
 
 
 

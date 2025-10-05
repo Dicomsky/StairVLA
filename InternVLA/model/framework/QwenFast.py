@@ -1,11 +1,15 @@
 """
-Qwenvl OFT framework:
-Vision-Language-Action diffusion model integrating:
-  - Qwen2.5 vision-language backbone
-  - learnable raw action token + positional embeddings for action sequences len = action chunk
-  - DiT diffusion head for future action sequence prediction
-Primary goal: predict continuous future actions special token conditioned on multi-view images + instruction.
+Qwen-Fast Framework
 
+A lightweight implementation for autoregressive discrete action prediction conditioned on multi-view images + instruction.
+
+Key Points:
+  - Qwen2.5 vision-language backbone
+  - Unified action learning via next-token prediction (fast tokenizer)
+  - Autoregressive action tokens derived from discretized / symbolized continuous actions
+
+Note: How to add special tokens to Qwen2.5:
+  /InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 """
 
 from typing import List
@@ -157,19 +161,14 @@ class Qwenvl_Fast(baseframework):
             generated_ids = self.qwen_vl_interface.model.generate(
                 **qwen_inputs,
             )
-
-        # decoder vlm_action to continue actions
-
         # --- Extract and decoder vlm_action to continue actions ---
-        # Find the indices of tokens within the action token range
-       
-        # --- 抽取动作 token (已偏移区间) ---
+        # --- extrace token (index based on VLM) ---
         batch_vlm_action_token_ids = self._extract_action_token_ids(generated_ids)
+        # --- map index to fast tokenizer index space ---
+        batch_fast_action_token_idx = self._decode_action_tokens(batch_vlm_action_token_ids)
+        normalized_actions = self.action_model.fast_tokenizer.decode(batch_fast_action_token_idx)
 
-        # --- 解码回 fast tokenizer 语义 ---
-        decoded_actions = self._decode_action_tokens(batch_vlm_action_token_ids)
-
-        return {"normalized_actions": decoded_actions}
+        return {"normalized_actions": normalized_actions}
 
     def _extract_action_token_ids(
         self,

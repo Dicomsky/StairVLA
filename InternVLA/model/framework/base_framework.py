@@ -30,7 +30,7 @@ from InternVLA.model.framework.share_tools import dict_to_namespace
 logger = initialize_overwatch(__name__)
 
 
-# PreTrainedModel, AutoModel, PretrainedConfig is good, find sometime
+# PreTrainedModel, AutoModel, PretrainedConfig are so good, find sometime to study them
 # TODO @JinhuiYE find sometime to merge yaml config with transformer config
 
 class baseframework(PreTrainedModel):
