@@ -3,14 +3,16 @@
 echo `which python`
 
 export SimplerEnv_PATH=/mnt/petrelfs/share/yejinhui/Projects/SimplerEnv
+export PYTHONPATH=/mnt/petrelfs/share/yejinhui/Envs/miniconda3/envs/dinoact:${PYTHONPATH}
 export PYTHONPATH=$(pwd):${PYTHONPATH}
 
-MODEL_PATH=$1
+MODEL_PATH=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenoft/checkpoints/steps_100000_pytorch_model.pt
+# MODEL_PATH=$1
 ckpt_path=${MODEL_PATH}
 TSET_NUM=1
-export DEBUG=1
+DEBUG=1
 
-
+port=5678
 
 IFS=',' read -r -a CUDA_DEVICES <<< "$CUDA_VISIBLE_DEVICES"
 NUM_GPUS=${#CUDA_DEVICES[@]} 
@@ -38,9 +40,9 @@ for i in "${!ENV_NAMES[@]}"; do
   for ((run_idx=1; run_idx<=TSET_NUM; run_idx++)); do
     echo "▶️ Launching task [${env}] run#${run_idx} on GPU $gpu_id, log → ${task_log}"
 
-    CUDA_VISIBLE_DEVICES=0 python examples/SimplerEnv/start_simpler_env.py \
+    python examples/SimplerEnv/start_simpler_env.py \
       --ckpt-path ${ckpt_path} \
-      --port 10093 \
+      --port ${port} \
       --robot ${robot} \
       --policy-setup widowx_bridge \
       --control-freq 5 \
@@ -76,7 +78,7 @@ for i in "${!ENV_NAMES_V2[@]}"; do
 
     CUDA_VISIBLE_DEVICES=0 python examples/SimplerEnv/start_simpler_env.py \
       --ckpt-path ${ckpt_path} \
-      --port 10093 \
+      --port ${port} \
       --robot ${robot} \
       --policy-setup widowx_bridge \
       --control-freq 5 \

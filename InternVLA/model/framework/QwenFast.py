@@ -71,6 +71,10 @@ class Qwenvl_Fast(baseframework):
         self.chunk_len = self.past_action_window_size + 1 + self.future_action_window_size
         self.hidden_dim = config.framework.action_model.action_hidden_dim
         
+        self.action_model.fast_tokenizer.time_horizon = self.future_action_window_size + 1
+        self.action_model.fast_tokenizer.action_dim = self.config.framework.action_model.action_dim
+
+        
 
     def forward(
         self,
@@ -160,12 +164,14 @@ class Qwenvl_Fast(baseframework):
         with torch.autocast("cuda", dtype=torch.bfloat16):
             generated_ids = self.qwen_vl_interface.model.generate(
                 **qwen_inputs,
+                max_length=4096,
             )
         # --- Extract and decoder vlm_action to continue actions ---
         # --- extrace token (index based on VLM) ---
         batch_vlm_action_token_ids = self._extract_action_token_ids(generated_ids)
         # --- map index to fast tokenizer index space ---
         batch_fast_action_token_idx = self._decode_action_tokens(batch_vlm_action_token_ids)
+        # --- decode fast tokenizer index to action semantic ---
         normalized_actions = self.action_model.fast_tokenizer.decode(batch_fast_action_token_idx)
 
         return {"normalized_actions": normalized_actions}
@@ -200,19 +206,16 @@ class Qwenvl_Fast(baseframework):
         fast_tokenizer.decode 预期输入：原始 fast token id 序列（未加偏移）。
         """
         act_min = self.action_model._ACTION_TOKEN_MIN
-        decoded = []
+        batch_fast_token_ids = []
         for seq in batch_vlm_tokens:
             if not seq:
-                decoded.append(None)
+                batch_fast_token_ids.append(None)
                 continue
             fast_ids = [t - act_min for t in seq]
-            try:
-                out = self.action_model.fast_tokenizer.decode(fast_ids)
-            except Exception:
-                # 若 fast_tokenizer.decode 接口不同，可在这里调整
-                out = None
-            decoded.append(out)
-        return decoded
+            
+            batch_fast_token_ids.append(fast_ids)
+        
+        return batch_fast_token_ids
 
 
 def build_model_framework(config: dict = {}) -> Qwenvl_Fast:
@@ -263,6 +266,10 @@ if __name__ == "__main__":
         break
 
     # try get model
+    ckpt_path = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenfast/checkpoints/steps_50000_pytorch_model.pt"
+    model = Qwenvl_Fast.from_pretrained(
+        pretrained_checkpoint=ckpt_path,
+    )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     model(batch)

@@ -26,11 +26,12 @@ from InternVLA.model.tools import auto_get_trainable_modules
 from InternVLA.model.framework.share_tools import read_mode_config
 from InternVLA.training.trainer_utils import initialize_overwatch
 from InternVLA.model.framework.share_tools import dict_to_namespace
+from InternVLA.model.framework.__init__ import build_framework
 
 logger = initialize_overwatch(__name__)
 
 
-# PreTrainedModel, AutoModel, PretrainedConfig are so good, find sometime to study them
+# PreTrainedModel, AutoModel, PretrainedConfig,  are so good, find sometime to study them
 # TODO @JinhuiYE find sometime to merge yaml config with transformer config
 
 class baseframework(PreTrainedModel):
@@ -85,7 +86,8 @@ class baseframework(PreTrainedModel):
         config = dict_to_namespace(model_config)
         model_config = config
         model_config.trainer.pretrained_checkpoint = None
-        FrameworkModel = cls(config=model_config, **kwargs)
+        # FrameworkModel = cls(config=model_config, **kwargs) # TODO find cls by config
+        FrameworkModel = build_framework(cfg=model_config)
         # set for action un-norm
         FrameworkModel.norm_stats = norm_stats
         # Load from Checkpoint (Custom --> should load both *projector* and *llm* weights)
@@ -226,6 +228,7 @@ class baseframework(PreTrainedModel):
     def get_action_stats(self, unnorm_key=None, norm_stats=None):
         """
         Duplicate stats accessor (retained for backward compatibility).
+        # in future, it will own to policy interface and pack as 
         """
         if norm_stats ==None:
             norm_stats = self.norm_stats

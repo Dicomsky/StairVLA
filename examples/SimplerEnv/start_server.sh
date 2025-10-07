@@ -1,9 +1,12 @@
 
 
-your_ckpt=InternRobotics/InternVLA-M1-Pretrain-RT-1-Bridge/checkpoints/steps_50000_pytorch_model.pt
-port=10093
+your_ckpt=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenoft/final_model/pytorch_model.pt
+sim_python=/mnt/petrelfs/share/yejinhui/Envs/miniconda3/envs/internM1/bin/python
+port=5678
+DEBUG=true
 
-python deployment/model_server/server_policy_M1.py \
+
+CUDA_VISIBLE_DEVICES=2 ${sim_python} deployment/model_server/server_policy.py \
     --ckpt_path ${your_ckpt} \
     --port ${port} \
     --use_bf16

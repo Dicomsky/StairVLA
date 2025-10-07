@@ -4,19 +4,19 @@
 
 ```bash
 
-your_ckpt=results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt
+your_ckpt=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenfast/checkpoints/steps_50000_pytorch_model.pt
 
-python deployment/model_server/server_policy_M1.py \
+python deployment/model_server/server_policy.py \
     --ckpt_path ${your_ckpt} \
     --port 10093 \
     --use_bf16
 ```
 
 
-# connect to policy server
+# connect to policy server for debug
 
-```python
-# in your sim <-> vla controler
-from deployment.model_server.tools.websocket_policy_client import WebsocketClientPolicy
-client = WebsocketClientPolicy(host, port)
+```bash
+python deployment/model_server/debug_server_policy.py
+
+# plus server_policy.py into your vla controler by ref to debug_server_policy.py
 ```

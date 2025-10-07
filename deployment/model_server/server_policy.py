@@ -2,7 +2,7 @@ import logging
 import socket
 import argparse
 from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
-from InternVLA.model.framework.M1 import InternVLA_M1
+from InternVLA.model.framework.base_framework import baseframework
 import torch, os
 
 
@@ -12,7 +12,7 @@ def main(args) -> None:
     # server = WebsocketPolicyServer(policy, host="localhost", port=10091)
     # server.serve_forever()
 
-    vla = InternVLA_M1.from_pretrained( # TODO should auto detect framework from model path
+    vla = baseframework.from_pretrained( # TODO should auto detect framework from model path
         args.ckpt_path,
     )
 

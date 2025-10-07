@@ -46,7 +46,7 @@ class Fast_Action_Tokenizer(nn.Module):
         """Maps fast action tokens to the VLM action format.
         Action token 0 is mapped to the string <robot_action_0>  ... and so on 
         """
-        return ''.join([f"<robot_action_{token}>" for token in tokens]) # you should add this to VLM as special tokens, 
+        return ''.join([f"<robot_action_{token}>" for token in tokens]) # you should add <robot_action_{token}> to VLM as special tokens, 
         # and set the 
         #see /mnt/petrelfs/yejinhui/Projects/llavavla/InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 
@@ -86,8 +86,8 @@ def start_debugpy_once():
     import debugpy
     if getattr(start_debugpy_once, "_started", False):
         return
-    debugpy.listen(("0.0.0.0", 10092))
-    print("🔍 Waiting for VSCode attach on 0.0.0.0:10092 ...")
+    debugpy.listen(("0.0.0.0", 10094))
+    print("🔍 Waiting for VSCode attach on 0.0.0.0:10094 ...")
     debugpy.wait_for_client()
     start_debugpy_once._started = True
 
