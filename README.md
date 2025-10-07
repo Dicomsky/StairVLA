@@ -1,218 +1,120 @@
-# InternVLA-M1
-
-**InternVLA-M1** is a Open-source Spatially Grounded Foundation Model for Generalist Robot Policy
-
-https://github.com/user-attachments/assets/e83ae046-a503-46a8-95e4-ef381919b7f8
-
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red.svg)](https://github.com/InternRobotics/InternVLA-M1/blob/InternVLA-M1/assets/InternVLA_M1.pdf) [![Website](https://img.shields.io/badge/Website-GitHub%20Pages-blue.svg)](https://internrobotics.github.io/internvla-m1.github.io) [![Demo](https://img.shields.io/badge/Demo-YouTube-red.svg)](https://youtu.be/n129VDqJCk4) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-![](assets/teaser.png)
-
-## Recent Updates
-
-2025-09-30 | EVAL | Double-check unified model server eval on Simpler & LIBERO |
-
-
-## 🔥 Key Features
-
-1. **Modular & Extensible**  
-   All core components (model architecture, training data, training strategies, evaluation pipeline) are fully decoupled, enabling independent development, debugging, and extension of each module.
-
-
-2. **Dual-System and Dual-Supervision**
-   InternVLA-M1 integrates both a language head and an action head under a unified framework, enabling collaborative training with dual supervision. 
-
-3. **Efficient Training & Fast Convergence**
-   Learns spatial and visual priors from large-scale multimodal pretraining and transfers them via spatial prompt fine-tuning. Achieves strong performance (e.g., SOTA-level convergence on  in \~2.5 epochs without separate action pretraining). 
-
-## 🎯 Target Audience
-
-1. Users who want to leverage open-source VLMs (e.g., Qwen2.5-VL) for robot control.
-2. Teams co-training action datasets jointly with multimodal (vision–language) data.
-3. Researchers exploring alternative VLA architectures and training strategies.
-
-## 📊 Experimental Results
-|             | WindowX | Google Robot(VA) | Google Robot(VM) | LIBERO |
-|-------------|---------|------------------|------------------|--------|
-| $\pi_0$         | 27.1    | 54.8             | 58.8             | 94.2   |
-| GR00t       | 61.9    | 44.5             | 35.2             | 93.9   |
-| InternVLA-M1 |**71.7** |**76.0**          |**80.7**          |**95.9**|
-
-
-
-# 🚀 Quick Start
-
-## 🛠 Environment Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/InternRobotics/InternVLA-M1
-
-# Create conda environment
-conda create -n internvla-m1 python=3.10 -y
-conda activate internvla-m1
-
-# Install requirements
-pip install -r requirements.txt
-
-# Install FlashAttention2
-pip install flash-attn --no-build-isolation
-
-# Install InternVLA-M1
-pip install -e .
-```
-
-
-## ⚡ Quick Interactive M1 Demo
-
-Below are two collapsible examples: InternVLA-M1 chat and action prediction.
-
-<details open>
-<summary><b>InternVLA-M1 Chat Demo (image Q&A / Spatial Grounding)</b></summary>
-
-```python
-from InternVLA.model.framework.M1 import InternVLA_M1
-from PIL import Image
-import requests
-from io import BytesIO
-import torch
-
-def load_image_from_url(url: str) -> Image.Image:
-    resp = requests.get(url, timeout=15)
-    resp.raise_for_status()
-    img = Image.open(BytesIO(resp.content)).convert("RGB")
-    return img
-
-saved_model_path = "/PATH/checkpoints/steps_50000_pytorch_model.pt"
-internVLA_M1 = InternVLA_M1.from_pretrained(saved_model_path)
-
-# Use the raw image link for direct download
-image_url = "https://raw.githubusercontent.com/InternRobotics/InternVLA-M1/InternVLA-M1/assets/table.jpeg"
-image = load_image_from_url(image_url)
-question = "Give the bounding box for the apple."
-response = internVLA_M1.chat_with_M1(image, question)
-print(response)
-```
-</details>
-
-<details>
-<summary><b>InternVLA-M1 Action Prediction Demo (two views)</b></summary>
-
-```python
-from InternVLA.model.framework.M1 import InternVLA_M1
-from PIL import Image
-import requests
-from io import BytesIO
-import torch
-
-def load_image_from_url(url: str) -> Image.Image:
-    resp = requests.get(url, timeout=15)
-    resp.raise_for_status()
-    img = Image.open(BytesIO(resp.content)).convert("RGB")
-    return img
-
-saved_model_path = "/PATH/checkpoints/steps_50000_pytorch_model.pt"
-internVLA_M1 = InternVLA_M1.from_pretrained(saved_model_path)
-
-image_url = "https://raw.githubusercontent.com/InternRobotics/InternVLA-M1/InternVLA-M1/assets/table.jpeg"
-view1 = load_image_from_url(image_url)
-view2 = view1.copy()
-
-# Construct input: batch size = 1, two views
-batch_images = [[view1, view2]]  # List[List[PIL.Image]]
-instructions = ["Pick up the apple and place it on the plate."]
-
-if torch.cuda.is_available():
-    internVLA_M1 = internVLA_M1.to("cuda")
-
-pred = internVLA_M1.predict_action(
-    batch_images=batch_images,
-    instructions=instructions,
-    cfg_scale=1.5,
-    use_ddim=True,
-    num_ddim_steps=10,
-)
-normalized_actions = pred["normalized_actions"]  # [B, T, action_dim]
-print(normalized_actions.shape, type(normalized_actions))
-```
-</details>
-
-
-## 📘 Examples
-
-We provide several end-to-end examples for reference:
-
-* **Reproduce InternVLA-M1 in SimplerEnv**
-  [Example](/examples/SimplerEnv)
-
-* **Reproduce InternVLA-M1 in LIBERO**
-  [Example](/examples/LIBERO)
-
-* **Training/Deployment on real robots**
-  [Example](/examples/real_robot)
-
-## 📈 Model Zoo
-We release a series of pretrained models and checkpoints to facilitate reproduction and downstream use.
-
-### ✅ Available Checkpoints
-
-| Model | Description | Link |
-|-------|-------------|------|
-| **InternVLA-M1** | Main pretrained model | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1) |
-| **InternVLA-M1-Pretrain-RT-1-Bridge** | Pretraining on RT-1 Bridge data | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1-Pretrain-RT-1-Bridge) |
-| **InternVLA-M1-LIBERO-Long** | Fine-tuned on LIBERO Long-horizon tasks | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1-LIBERO-Long) |
-| **InternVLA-M1-LIBERO-Goal** | Fine-tuned on LIBERO Goal-conditioned tasks | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1-LIBERO-Goal) |
-| **InternVLA-M1-LIBERO-Spatial** | Fine-tuned on LIBERO Spatial reasoning tasks | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1-LIBERO-Spatial) |
-| **InternVLA-M1-LIBERO-Object** | Fine-tuned on LIBERO Object-centric tasks | [🤗 Hugging Face](https://huggingface.co/InternRobotics/InternVLA-M1-LIBERO-Object) |
-
-
-
-# 🗺️ Roadmap
-
-* [ ] Add Co-training readme (might at 9/30)
-* [ ] Add training readme on simpler, LIBERO, etc. (might at 9/29)
-* [x] 0918: Release model weights
-
-
-# 🤝 Contributing
-
-We welcome contributions via Pull Requests or Issues.
-Please include detailed logs and reproduction steps when reporting bugs.
-
-# 📜 Citation
-
-If you find this useful in your research, please consider citing:
-
-```bibtex
-@misc{internvla2024,
-  title  = {InternVLA-M1: Latent Spatial Grounding for Instruction-Following Robotic Manipulation},
-  author = {InternVLA-M1 Contributors},
-  year   = {2025},
-  booktitle={arXiv},
-}
-```
-
-# 📬 Contact
-
-* Issues: Submit via GitHub Issues with detailed logs and steps
-
-# 🙏 Acknowledgements
-
-We thank the open-source community for their inspiring work. This project builds upon and is inspired by the following projects (alphabetical order):
-- [IPEC-COMMUNITY](https://huggingface.co/IPEC-COMMUNITY): Curated OXE / LIBERO style multi-task datasets and formatting examples.
-- [Isaac-GR00T](https://github.com/NVIDIA/Isaac-GR00T): Standardized action data loader (GR00T-LeRobot).
-- [Qwen2.5-VL](https://github.com/QwenLM/Qwen2.5-VL/blob/main/qwen-vl-finetune/README.md): Multimodal input/output format, data loader, and pretrained VLM backbone.
-- [CogACT](https://github.com/microsoft/CogACT/tree/main/action_model): Reference for a DiT-style action head design.
-- [llavavla](https://github.com/JinhuiYE/llavavla): Baseline code structure and engineering design references.
-- [GenManip Simulation Platform](https://github.com/InternRobotics/GenManip): Simulation platform for generalizable pick-and-place based on Isaac Sim.
-
-
-Notes:
-- If any required attribution or license header is missing, please open an issue and we will correct it promptly.
-- All third-party resources remain under their original licenses; users should comply with respective terms.
+# StarVLA (tarVLA)
+一个让 Vision-Language-Action (VLA) 模型开发重新像搭积木一样灵活的模块化代码库  
+
+
+> 核心理念：Top-Down 拆分、单一职责、高内聚低耦合、全部组件可插拔（Lego-like）。
+
+<!-- 优先使用 PNG/SVG，可保留 PDF 作为补充 -->
+![StarVLA Roadmap](assets/starVLA_arg.png)
+
+[StarVLA Roadmap](assets/starVLA_arg.pdf)
+**图例**：实线框 = 已支持 | 无边框 = Coming Soon | 欢迎 PR 扩展
+
+- [ ] Various VLA Frameworks：基于 Qwen2.5-VL 的多种框架拼装  
+- [ ] Various VLA Benchmarks：主流 Robot Manipulation benchmark 训练 + 评测打通  
+- [ ] Various Training Strategies：更多混合 / 分阶段 / 课程式策略插件  
+
+---
+
+## 1. 为什么有 StarVLA？
+当前 VLA 研发痛点：
+- 代码耦合：数据、模型、推理、环境绑定到一起，复用成本高  
+- 迭代慢：替换一个感知/控制模块需改多处  
+- 训练 / 推理 pipeline 不透明：forward/inference 链路难追踪  
+ 
+
+StarVLA 提供：
+- Framework = 唯一对外模型入口，可单文件阅读/执行
+- Modules = 感知、融合、决策、动作头等积木
+- Dataloader 直接产出“原始语义模态”而非过度预处理
+- 全局单一 config（集中 + 可 CLI 覆盖 + 运行期快照）
+- Trainer 支持多数据源（dict 形式调度）
+- Inference 一致走 websocket，Sim 通过 sim_interface 解耦
+- Dict 作为参数/输出签名，易扩展 & 容错
+
+---
+
+## 2. 特性概览
+- VLA 框架：多种架构（基于 Qwen2.5-VL，可插入控制/规划模块）
+- Benchmark：打通主流机器人操作数据与评测（持续扩展）
+- 训练策略：支持多源混合、阶段式、策略插拔
+- 数据支持：对齐 LeRobot / GR00T 风格，可扩任意自定义源
+- 推理统一：WebSocket + model2sim_interface.py
+- 高可视化：单文件可跑的 Framework / Dataset 便于审查
+- 极简扩展：新增模块无需侵入全局
+
+---
+
+
+## 3. 设计原则（Lego Philosophy）
+1. Framework.py = 唯一外部入口（可 python framework/my_vla_framework.py 跑通 forward + inference demo）  
+3. Dataloader 返回“最原始”对象：PIL Image / str / normed actions / state（预处理延后到 Framework）。  
+4. 全局 config：读取 oxe.yaml → CLI 覆盖 → 运行时冻结副本存入 save_path。  
+5. Trainer 维护 {name: dataloader} dict，多源策略化调度。  
+6. Inference：一律 WebSocket，Sim 通过 adapter（model2sim_interface.py）桥接。  
+7. 输入输出签名：dict，可包含冗余字段（向后兼容）。  
+8. 可观测性：所有关键 forward path 应可单步打印/trace。  
+
+---
+
+
+## 4. 编写一个新 Framework
+步骤：
+1. 复制 base_framework.py → my_framework.py  
+2. 定义 init：注册所需 modules（vision_encoder / policy_head / tokenizer 等）  
+3. 实现 forward(self, batch: Dict) → Dict：含 loss / metrics / actions  
+4. 实现 inference(self, obs: Dict) → action Dict  
+5. 添加一个 demo main：构造假 batch，跑 forward 与 inference  
+6. 在 trainer config 中引用：model.framework = my_framework  
 
 
 ---
 
-Thanks for using **InternVLA-M1**! 🌟
-If you find it useful, please consider giving us a ⭐ on GitHub.
+
+## 5. 贡献指南
+1. Fork & 新建分支：feat/<name>
+2. 新模块：放入 framework/modules/xxx
+3. 提供最小可运行 demo（python your_file.py）
+4. 更新 tests/（若含公共逻辑）
+5. PR 模板需含：
+   - 背景
+   - 变化点
+   - 性能/收敛影响（若适用）
+6. 代码风格：PEP8 + 黑格式化 (black) + isort
+
+---
+
+## 6. FAQ
+Q: 为什么不把预处理放 dataloader?  
+A: 统一到 Framework，使模型差异化处理自由化，减少数据侧分叉。
+
+Q: 可以不用 Qwen2.5-VL 吗？  
+A: 可以。实现一个新 vision+language 模块并在 Framework 中组合。
+
+Q: 多 dataloader 的 loss 如何加权？  
+A: Trainer 中可配置 weight dict，或在框架 forward 聚合。
+
+Q: 推理速度如何优化？  
+A: 关闭多余 debug 字段、开启模型半精度、缓存 tokenizer。
+
+---
+
+## 7. 引用 (Citation)
+(即将添加 BibTeX，占位)
+```
+@misc{starvla2025,
+  title  = {StarVLA: Modular Vision-Language-Action Codebase},
+  author = {...},
+  year   = {2025}
+}
+```
+
+---
+
+## 8. 致谢
+参考与灵感：LeRobot, GR00T, DeepSpeed, 各类开源 VLM / 控制实践。  
+Codeabse fork from InternVLA-M1
+
+---
+
+
