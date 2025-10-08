@@ -21,12 +21,12 @@ from pathlib import Path
 from typing import Dict, List
 from transformers import AutoConfig, AutoModel, PretrainedConfig, PreTrainedModel
 import numpy as np
-from InternVLA.model.tools import auto_get_trainable_modules
+from starVLA.model.tools import auto_get_trainable_modules
 
-from InternVLA.model.framework.share_tools import read_mode_config
-from InternVLA.training.trainer_utils import initialize_overwatch
-from InternVLA.model.framework.share_tools import dict_to_namespace
-from InternVLA.model.framework.__init__ import build_framework
+from starVLA.model.framework.share_tools import read_mode_config
+from starVLA.training.trainer_utils import initialize_overwatch
+from starVLA.model.framework.share_tools import dict_to_namespace
+from starVLA.model.framework.__init__ import build_framework
 
 logger = initialize_overwatch(__name__)
 

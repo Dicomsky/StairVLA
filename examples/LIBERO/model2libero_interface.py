@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 
-from InternVLA.model.framework.share_tools import read_mode_config
+from starVLA.model.framework.share_tools import read_mode_config
 
 
 

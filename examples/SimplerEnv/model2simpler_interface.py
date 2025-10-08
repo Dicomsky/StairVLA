@@ -15,8 +15,8 @@ from pathlib import Path
 
 
 
-from InternVLA.model.framework.share_tools import read_mode_config
-from InternVLA.model.framework.M1 import InternVLA_M1
+from starVLA.model.framework.share_tools import read_mode_config
+from starVLA.model.framework.M1 import InternVLA_M1
 
 
 class M1Inference:

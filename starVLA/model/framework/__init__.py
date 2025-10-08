@@ -20,13 +20,13 @@ def build_framework(cfg):
         NotImplementedError: If the specified framework id is unsupported.
     """
     if cfg.framework.framework_py == "InternVLA-M1":
-        from InternVLA.model.framework.M1 import build_model_framework
+        from starVLA.model.framework.M1 import build_model_framework
         return build_model_framework(cfg)
     elif cfg.framework.framework_py == "QwenOFT":
-        from InternVLA.model.framework.QwenOFT import build_model_framework
+        from starVLA.model.framework.QwenOFT import build_model_framework
         return build_model_framework(cfg)
     elif cfg.framework.framework_py == "QwenFast":
-        from InternVLA.model.framework.QwenFast import build_model_framework
+        from starVLA.model.framework.QwenFast import build_model_framework
         return build_model_framework(cfg)
 
     raise NotImplementedError(f"Framework {cfg.framework.framework_py} is not implemented.")

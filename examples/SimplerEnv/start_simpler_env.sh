@@ -10,7 +10,7 @@ MODEL_PATH=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwe
 # MODEL_PATH=$1
 ckpt_path=${MODEL_PATH}
 TSET_NUM=1
-DEBUG=1
+# DEBUG=1
 
 port=5678
 

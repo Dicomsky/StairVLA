@@ -37,16 +37,16 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from PIL import Image
 
-from InternVLA.dataloader.gr00t_lerobot.video import get_all_frames, get_frames_by_timestamps
+from starVLA.dataloader.gr00t_lerobot.video import get_all_frames, get_frames_by_timestamps
 
-from InternVLA.dataloader.gr00t_lerobot.embodiment_tags import EmbodimentTag
-from InternVLA.dataloader.gr00t_lerobot.schema import (
+from starVLA.dataloader.gr00t_lerobot.embodiment_tags import EmbodimentTag
+from starVLA.dataloader.gr00t_lerobot.schema import (
     DatasetMetadata,
     DatasetStatisticalValues,
     LeRobotModalityMetadata,
     LeRobotStateActionMetadata,
 )
-from InternVLA.dataloader.gr00t_lerobot.transform import ComposedModalityTransform
+from starVLA.dataloader.gr00t_lerobot.transform import ComposedModalityTransform
 
 from functools import partial
 from typing import Tuple, List

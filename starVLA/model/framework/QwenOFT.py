@@ -23,17 +23,17 @@ from PIL import Image
 
 
 
-from InternVLA.training.trainer_utils import initialize_overwatch
+from starVLA.training.trainer_utils import initialize_overwatch
 
 logger = initialize_overwatch(__name__)
 
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
 
-from InternVLA.model.framework.base_framework import baseframework
-from InternVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
-from InternVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
-from InternVLA.training.trainer_utils.metrics import resize_images
+from starVLA.model.framework.base_framework import baseframework
+from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
+from starVLA.training.trainer_utils.metrics import resize_images
 
 
 class Qwenvl_OFT(baseframework):
@@ -278,7 +278,7 @@ if __name__ == "__main__":
 
     # try forward model
     # can be fake sample， but here get from dataloader for simpler
-    from InternVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
+    from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
 
     vla_dataset_cfg = cfg.datasets.vla_data
     dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)

@@ -14,7 +14,7 @@ import os
 import numpy as np
 from transformers import AutoProcessor
 
-from InternVLA.model.modules.vlm.QWen2_5 import _ACTION_TOKEN_MAX, _ACTION_TOKEN_MIN
+from starVLA.model.modules.vlm.QWen2_5 import _ACTION_TOKEN_MAX, _ACTION_TOKEN_MIN
 
 class Fast_Action_Tokenizer(nn.Module):
     """One MLP ResNet block with a residual connection."""

@@ -15,15 +15,15 @@
 
 from abc import ABC, abstractmethod
 
-from InternVLA.dataloader.gr00t_lerobot.datasets import ModalityConfig
-from InternVLA.dataloader.gr00t_lerobot.transform.base import ComposedModalityTransform, ModalityTransform
-from InternVLA.dataloader.gr00t_lerobot.transform.concat import ConcatTransform
-from InternVLA.dataloader.gr00t_lerobot.transform.state_action import (
+from starVLA.dataloader.gr00t_lerobot.datasets import ModalityConfig
+from starVLA.dataloader.gr00t_lerobot.transform.base import ComposedModalityTransform, ModalityTransform
+from starVLA.dataloader.gr00t_lerobot.transform.concat import ConcatTransform
+from starVLA.dataloader.gr00t_lerobot.transform.state_action import (
     StateActionSinCosTransform,
     StateActionToTensor,
     StateActionTransform,
 )
-from InternVLA.dataloader.gr00t_lerobot.transform.video import (
+from starVLA.dataloader.gr00t_lerobot.transform.video import (
     VideoColorJitter,
     VideoCrop,
     VideoResize,

@@ -2,7 +2,7 @@ import logging
 import socket
 import argparse
 from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
-from InternVLA.model.framework.base_framework import baseframework
+from starVLA.model.framework.base_framework import baseframework
 import torch, os
 
 

@@ -30,7 +30,7 @@ import functools
 from typing import Any
 
 
-from InternVLA.training.trainer_utils import initialize_overwatch
+from starVLA.training.trainer_utils import initialize_overwatch
 
 # Initialize Overwatch =>> Wraps `logging.Logger`
 overwatch = initialize_overwatch(__name__)

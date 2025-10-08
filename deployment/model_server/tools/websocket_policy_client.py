@@ -51,7 +51,7 @@ class WebsocketClientPolicy:
                 metadata = msgpack_numpy.unpackb(conn.recv())
                 return conn, metadata
             except ConnectionRefusedError:
-                logging.info("Still waiting for server...")
+                logging.info(f"Still waiting for server {self._uri} ...")
                 time.sleep(2)
 
     def init_device(self, device: str = "cuda") -> Dict:

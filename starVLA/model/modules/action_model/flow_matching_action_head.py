@@ -13,12 +13,12 @@ from torch.distributions import Beta
 from transformers import PretrainedConfig
 from transformers.feature_extraction_utils import BatchFeature
 
-from InternVLA.model.modules.action_model.follow_match_header.action_encoder import (
+from starVLA.model.modules.action_model.follow_match_header.action_encoder import (
     SinusoidalPositionalEncoding,
     swish,
 )
 
-from InternVLA.model.modules.action_model.follow_match_header.cross_attention_dit import DiT, SelfAttentionTransformer
+from starVLA.model.modules.action_model.follow_match_header.cross_attention_dit import DiT, SelfAttentionTransformer
 
 # TODO try to meger DiT Modules with follow_match_head, they are just the same arch, but diff loss, use diffusers package will be simple
 

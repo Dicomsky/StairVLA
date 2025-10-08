@@ -6,8 +6,8 @@ Provides:
   - ActionModel: wraps diffusion process (training + optional DDIM sampling creation)
 """
 
-from InternVLA.model.modules.action_model.DiT_modules.models import DiT
-from InternVLA.model.modules.action_model import create_diffusion
+from starVLA.model.modules.action_model.DiT_modules.models import DiT
+from starVLA.model.modules.action_model import create_diffusion
 from .DiT_modules import gaussian_diffusion as gd
 
 import torch

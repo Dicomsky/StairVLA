@@ -205,3 +205,4 @@ scripts/*
 
 scripts/run_scripts/sum2cluter.sh
 
+examples/SimplerEnv/eval_scripts
