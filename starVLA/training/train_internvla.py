@@ -25,10 +25,10 @@ from tqdm import tqdm
 from transformers import AutoProcessor, get_scheduler
 
 # Local Modules
-from starVLA.training.trainer_utils.metrics import normalize_dotlist_args
+from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
 from starVLA.model.framework import build_framework
-from starVLA.training.trainer_utils.metrics import TrainerUtils
-from starVLA.training.trainer_utils.metrics import build_param_lr_groups
+from starVLA.training.trainer_utils.trainer_tools import TrainerUtils
+from starVLA.training.trainer_utils.trainer_tools import build_param_lr_groups
 
 deepspeed_plugin = DeepSpeedPlugin()
 accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)

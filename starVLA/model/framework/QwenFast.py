@@ -33,7 +33,7 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
 from starVLA.model.modules.action_model.fast_ActionHeader import get_action_model
-from starVLA.training.trainer_utils.metrics import resize_images
+from starVLA.training.trainer_utils.trainer_tools import resize_images
 
 
 class Qwenvl_Fast(baseframework):
