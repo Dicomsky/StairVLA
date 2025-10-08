@@ -1,120 +1,226 @@
-# StarVLA (tarVLA)
-一个让 Vision-Language-Action (VLA) 模型开发重新像搭积木一样灵活的模块化代码库  
+# StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing
+StarVLA is a modular and flexible codebase for developing Vision-Language Model (VLM) to Vision-Language-Action (VLA) models.
+In StarVLA (also a pun on “start VLA” ), each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion & low coupling principle, enabling plug-and-play design, rapid prototyping, and independent debugging. 
+The goal is to make VLA development as simple as building with Lego bricks—without modifying the global system—and to quickly integrate with a variety of benchmarks for validation.
 
 
-> 核心理念：Top-Down 拆分、单一职责、高内聚低耦合、全部组件可插拔（Lego-like）。
 
-<!-- 优先使用 PNG/SVG，可保留 PDF 作为补充 -->
-![StarVLA Roadmap](assets/starVLA_arg.png)
 
-[StarVLA Roadmap](assets/starVLA_arg.pdf)
-**图例**：实线框 = 已支持 | 无边框 = Coming Soon | 欢迎 PR 扩展
+![](assets/starVLA_v1.png)
+*Modules with solid borders are supported; borderless ones are coming soon.
 
-- [ ] Various VLA Frameworks：基于 Qwen2.5-VL 的多种框架拼装  
-- [ ] Various VLA Benchmarks：主流 Robot Manipulation benchmark 训练 + 评测打通  
-- [ ] Various Training Strategies：更多混合 / 分阶段 / 课程式策略插件  
+
+
+## 🔥 Key Features
+
+
+
+<details open>
+<summary><b>Various VLA Frameworks </b></summary>
+
+- [x] **Qwen-FAST**: Utilizes Qwen2.5-VL-3B with a fast tokenizer to autoregressively generate discrete action tokens conditioned on visual and linguistic inputs (in line with RT-2/OpenVLA/π₀-fast).
+- [x] **Qwen-OFT**: Combines Qwen2.5-VL-3B with an MLP action head to perform parallel decoding of continuous actions, regressed from the hidden states of predefined special action tokens (in line with OpenVLA-OFT/EO).
+- [ ] **Qwen-FM**: Integrates the Flow-Matching (FM) action expert with Qwen2.5-VL-3B, adopting a diffusion-based approach for continuous action prediction (in line with π₀/GR-3).
+- [ ] **Qwen-Dual**: Implements a dual-system VLA architecture, where Qwen2.5-VL-3B serves as System2 for high-level vision-language reasoning, while the Flow-Matching module acts as System1 for rapid action prediction (in line with GR00T/InternVLA-M1).
+
+
+
+<p align="center">
+  <img src="assets/simplerEnv.png" alt="SimplerEnv modules" width="85%">
+</p>
+
+
+
+</details>
+
+<details open>
+<summary><b>Various Simulation Benchmarks </b></summary>
+
+
+- [x] **SimplerEnV**
+- [x] **LIBERO**
+- [ ] **Robocasa**
+- [ ] **RLBench**
+- [ ] **RoboTwin**
+- [ ] **BEHAVIOR**
+
+</details>
+
+
+<details open>
+<summary><b> Various Training Strategies </b></summary>
+
+* [x] Single Imitation Learning
+* [x] Multimodal Multitasks Co-training
+* [ ] Reinforcement Learning Adaption
+
+</details>
+
+
+
+
+
+## 🔍 Why StarVLA?
+
+
+Pains in the community:
+- Tight coupling of code: data / model / inference / environment are bound together, making migration and reuse costly 
+- Opaque training / inference pipeline: forward / inference call chains are hard to trace  
+- Non‑uniform benchmarks / baselines: inconsistent evaluation setups and data assumptions hinder fair comparison  
+- High barrier for the broader CV/NLP community
+
+<!-- StarVLA solutions:
+- **Modular & Extensible**: Clear module boundaries; each (framework / dataloader / trainer / serving) can be understood & debugged in a single `python your_framwork.py`
+- **Explicit & Traceable Pipeline**: 统一 `forward()/predict_action()` 入口，预处理集中在 framework；调用链易追踪
+- **Unified Inference & Evaluation Interface**: WebSocket policy server + simulator adapters decouple training vs. evaluation and simulation vs. real robot, exposing a single action API -->
 
 ---
 
-## 1. 为什么有 StarVLA？
-当前 VLA 研发痛点：
-- 代码耦合：数据、模型、推理、环境绑定到一起，复用成本高  
-- 迭代慢：替换一个感知/控制模块需改多处  
-- 训练 / 推理 pipeline 不透明：forward/inference 链路难追踪  
+## 🌟 How does starVLA make model development Lego-like again?
+👇 StarVLA achieves “Lego-like” development via the following designs:
+
+<a id="model"></a>
+<details open>
+<summary><b>1. Model: Modular & Extensible Framework</b></summary>
+
+StarVLA emphasizes modular model design, following top‑down decomposition and a principle of high cohesion & low coupling. We define the following conventions:
+
+1. `starVLA.model.framework.yourframework.py` is the external API of the model; it should correspond to (be isomorphic with) the framework figure in your paper.  
+2. Each `yourframework.py` or `module.py` can run standalone (`python yourframework.py`) to demo forward + inference.  
+
+</details>
+
+
+<a id="data"></a>
+<details open>
+<summary><b>2. DataLoader: Model-Agnostic Data Processing</b></summary>
+
+Best practice references: GR00T / LeRobot action data schemas; multimodal data can reuse LLaVA JSON style. Conventions:
+
+1. Dataloader returns raw data: `PIL.Image`, `str`, normalized actions, state, etc. Must return a single dict
+2. Any model‑specific preprocessing only lives inside `yourframework.forward()`
+3. Can custom dataloader and copyright any existing dataloader, but should run standalone and print/validate one legal sample dict. e.g., `python lerobot_datasets.py`.
+
+</details>
+
+
  
+<a id="config"></a>
+<details open>
+<summary><b>3. Config System: Global & Extensible Unified Configuration</b></summary>
 
-StarVLA 提供：
-- Framework = 唯一对外模型入口，可单文件阅读/执行
-- Modules = 感知、融合、决策、动作头等积木
-- Dataloader 直接产出“原始语义模态”而非过度预处理
-- 全局单一 config（集中 + 可 CLI 覆盖 + 运行期快照）
-- Trainer 支持多数据源（dict 形式调度）
-- Inference 一致走 websocket，Sim 通过 sim_interface 解耦
-- Dict 作为参数/输出签名，易扩展 & 容错
+Global `config.yaml` acts as a single, extensible source of truth.
+
+Conventions:
+Global `config.yaml` acts as a single, extensible source of truth.
+
+1. Use `OmegaConf.load(args.config_yaml)` as the single configuration entry; standalone debugging also uses `args.config_yaml`.
+2. Parameters may be intentionally redundant; you can freely add or override them via the CLI. Example:
+`--framework.framework_py Qwen-OFT` to overwite and  `--framework.action_model.new_arg ${action_type}` for adding new arg.
+3. Config snapshot: save the unified config in the output directory so experiments can be restarted quickly.
+
+</details>
+
+
+<a id="trainer"></a>
+<details open>
+<summary><b>4. Trainer: Lightweight & Strategy-Oriented</b></summary>
+
+StarVLA’s trainer is built directly on native PyTorch + Accelerate + DeepSpeed, keeping the loop explicit and easy to hack.
+Conventions:
+1. Store runtime state in dicts where possible (simplifies data info, procesing info, config, etc).  
+2. Use different dataloaders to adapt heterogeneous data types / task mixtures.  
+3. Put each training strategy in its own `trainer_*.py` file (avoid large if‑else chains).  
+
+</details>
+
+<a id="inference"></a>
+<details open>
+<summary><b>5. Inference: Unified WebSocket Abstraction</b></summary>
+
+A unified WebSocket inference abstraction reduces integration complexity with simulators and real robots.
+
+Conventions:
+1. `policy_server.py` exposes only the core inference call: `framework.predict_action()`  
+2. Disallow ad‑hoc test‑time parameter injection (e.g., extra un‑normalization flags, execution heuristics) to keep out evaluation settings  
+3. Provide per‑environment policy clients (e.g., `examples/SimplerEnv/model2simpler_interface.py`) that handle connection, request packing, retries, and action post‑processing for vairous benchmarks.
+
+</details>
+
+
+
 
 ---
 
-## 2. 特性概览
-- VLA 框架：多种架构（基于 Qwen2.5-VL，可插入控制/规划模块）
-- Benchmark：打通主流机器人操作数据与评测（持续扩展）
-- 训练策略：支持多源混合、阶段式、策略插拔
-- 数据支持：对齐 LeRobot / GR00T 风格，可扩任意自定义源
-- 推理统一：WebSocket + model2sim_interface.py
-- 高可视化：单文件可跑的 Framework / Dataset 便于审查
-- 极简扩展：新增模块无需侵入全局
-
----
+***To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our usability target: an internal developer can stand up a new VLA framework in under half day, and an external user can build their first custom VLA framework within a single day.***
 
 
-## 3. 设计原则（Lego Philosophy）
-1. Framework.py = 唯一外部入口（可 python framework/my_vla_framework.py 跑通 forward + inference demo）  
-3. Dataloader 返回“最原始”对象：PIL Image / str / normed actions / state（预处理延后到 Framework）。  
-4. 全局 config：读取 oxe.yaml → CLI 覆盖 → 运行时冻结副本存入 save_path。  
-5. Trainer 维护 {name: dataloader} dict，多源策略化调度。  
-6. Inference：一律 WebSocket，Sim 通过 adapter（model2sim_interface.py）桥接。  
-7. 输入输出签名：dict，可包含冗余字段（向后兼容）。  
-8. 可观测性：所有关键 forward path 应可单步打印/trace。  
+## 📖 FAQ
 
----
+<details close>
+<summary><b>Q: Why not put preprocessing in the dataloader?</b></summary>
+
+A: We profiled it: data preprocessing takes <1% time. Keeping it inside the Framework is acceptable and allows model‑specific flexible handling.
+
+</details>
+
+<details close>
+<summary><b>Q: Can I use a backbone other than Qwen2.5-VL?</b></summary>
+
+A: Yes. Implement new vision + language modules and compose them inside a Framework; any base model can be swapped in (examples coming soon).
+</details>
+
+<details close>
+<summary><b>Q: Can I freeze the VLM via parameters?</b></summary>
+
+A: Yes. StarVLA uses a regex / name list to control freezing. Example:
+```
+--trainer.freeze_modules "qwen_vl_interface.model.model.visual,dino_encoder" \
+```
+(Comma‑separated; implementation in `TrainerUtils.freeze_backbones`.)
+
+</details>
+
+<details close>
+<summary><b>Q: Can I set different learning rates for different modules?</b></summary>
+
+A: Yes. Config example:
+```yaml
+trainer:
+  learning_rate:
+    base: 1e-05      # other modules
+    qwen_vl_interface: 1.0e-05
+    action_model: 1.0e-04
+```
+(Also referenced in `TrainerUtils.freeze_backbones`.)
+</details>
+
+<details close>
+<summary><b>Q: Can I resume training from a checkpoint?</b></summary>
+
+A: Yes. Specify the latest checkpoint path in `config.yaml`, e.g.:
+```yaml
+trainer:
+  pretrained_checkpoint: path_to_steps_10000.pt
+  reload_modules: "action_model,layer_qformer"
+```
+Empty means full load. (Optimizer state not saved to reduce memory/disk; limited benefit for loading Optimizer state.)
+</details>
 
 
-## 4. 编写一个新 Framework
-步骤：
-1. 复制 base_framework.py → my_framework.py  
-2. 定义 init：注册所需 modules（vision_encoder / policy_head / tokenizer 等）  
-3. 实现 forward(self, batch: Dict) → Dict：含 loss / metrics / actions  
-4. 实现 inference(self, obs: Dict) → action Dict  
-5. 添加一个 demo main：构造假 batch，跑 forward 与 inference  
-6. 在 trainer config 中引用：model.framework = my_framework  
 
-
----
-
-
-## 5. 贡献指南
-1. Fork & 新建分支：feat/<name>
-2. 新模块：放入 framework/modules/xxx
-3. 提供最小可运行 demo（python your_file.py）
-4. 更新 tests/（若含公共逻辑）
-5. PR 模板需含：
-   - 背景
-   - 变化点
-   - 性能/收敛影响（若适用）
-6. 代码风格：PEP8 + 黑格式化 (black) + isort
-
----
-
-## 6. FAQ
-Q: 为什么不把预处理放 dataloader?  
-A: 统一到 Framework，使模型差异化处理自由化，减少数据侧分叉。
-
-Q: 可以不用 Qwen2.5-VL 吗？  
-A: 可以。实现一个新 vision+language 模块并在 Framework 中组合。
-
-Q: 多 dataloader 的 loss 如何加权？  
-A: Trainer 中可配置 weight dict，或在框架 forward 聚合。
-
-Q: 推理速度如何优化？  
-A: 关闭多余 debug 字段、开启模型半精度、缓存 tokenizer。
-
----
-
-## 7. 引用 (Citation)
-(即将添加 BibTeX，占位)
+## ✍️ Citation
+(BibTeX coming soon; placeholder)
 ```
 @misc{starvla2025,
-  title  = {StarVLA: Modular Vision-Language-Action Codebase},
+  title  = {StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing},
   author = {...},
   year   = {2025}
 }
 ```
 
----
 
-## 8. 致谢
-参考与灵感：LeRobot, GR00T, DeepSpeed, 各类开源 VLM / 控制实践。  
-Codeabse fork from InternVLA-M1
-
----
-
+##  🙏 Acknowledgements
+References & inspiration: LeRobot, GR00T, DeepSpeed, various open‑source VLM / control projects.  
+Codebase originally forked from InternVLA-M1
 

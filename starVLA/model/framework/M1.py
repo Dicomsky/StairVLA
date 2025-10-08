@@ -30,7 +30,7 @@ from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
 from starVLA.model.modules.projector.QFormer import get_layerwise_qformer
 from starVLA.model.modules.action_model.DiTActionHeader import get_action_model
 from starVLA.model.modules.dino_model.dino import get_dino_model
-from starVLA.training.trainer_utils.metrics import resize_images
+from starVLA.training.trainer_utils.trainer_tools import resize_images
 
 
 class InternVLA_M1(baseframework):
