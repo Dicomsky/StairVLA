@@ -191,6 +191,7 @@ class BasicTransformerBlock(nn.Module):
 class DiT(ModelMixin, ConfigMixin):
     _supports_gradient_checkpointing = True
 
+    # register_to_config 的作用是创建类的时候会自动把传入的参数注册到 config 中，这样后续调用的时候可以通过 self.config.xxx 调用 还不是 self.xxx
     @register_to_config # 去看一下这个的作用 --> 将传入的参数注册到配置中 TODO 改为我们的单例模式, 写一个 能够merge 的 @merge_pram_config
     def __init__(
         self,

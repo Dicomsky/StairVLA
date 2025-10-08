@@ -1,62 +1,48 @@
-run_id: internvla_cotrain_custom
+run_id: qwenact
 run_root_dir: results/Checkpoints
 seed: 42
 trackers: [jsonl, wandb]
-wandb_entity: WANDB_ENTITY
-wandb_project: WANDB_PROJECT
+wandb_entity: your_wandb_entity
+wandb_project: llavavla
 is_debug: false
 
 framework:
-  framework_py: InternVLA-M1
-  qwenvl: # TODO later should not use qwenvl should use vlm directly
+  framework_py: QwenFMHead
+  qwenvl:
     base_vlm: ./playground/Pretrained_models/Qwen2.5-VL-3B-Instruct
     attn_implementation: flash_attention_2
-    vl_hidden_dim: 2048 # TODO should read from internal config
+    vl_hidden_dim: 2048
   dino:
     dino_backbone: dinov2_vits14
-  layer_qformer: 
-    qformer_end_layer: 37
-    qformer_start_layer: 36
-    num_query_tokens: 64
-    input_dim: 2048 # here is VLM output dimension
-    ouptput_dim: 768 # here is action input dimension # here has a rule that ouptput_dim = action_hidden_dim; --> top2down logic should not default match, should be modified manually
-    grad_scale: 0.5 # let gradient pass through this module to decay, avoid destroying VLM, # seems to affect learning
 
   action_model:
     action_model_type: DiT-B
-    action_hidden_dim: 768
-    action_dim: 7
-    use_ema: false
-    future_action_window_size: 15
-    past_action_window_size: 0
-    repeated_diffusion_steps: 8
-  
-  fm_head_config:
-    input_embedding_dim: 1536     # Action embedding after dimension 48 * 32，and DiT's attention_head_dim * attention_heads corresponds to ActionEncoder
-    hidden_size: 1024     # and DiT's last projection corresponds to ActionDecoder
+    hidden_size: 1024     # 和 DiT 最后的 projection 对应，用于 ActionDecoder
     add_pos_embed: True
     max_seq_len: 1024
     action_dim: 7
+    state_dim: 7
     future_action_window_size: 15
-    action_horizon: 16 # = future_action_window_size + 1 + past_action_window_size
+    action_horizon: 16
     past_action_window_size: 0
+    repeated_diffusion_steps: 8
     noise_beta_alpha: 1.5
     noise_beta_beta: 1.0
     noise_s: 0.999
     num_timestep_buckets: 1000
     num_inference_timesteps: 4
     num_target_vision_tokens: 32
-    diffusion_model_cfg:    # DiT Transformers parameters
-      attention_head_dim: 48
-      cross_attention_dim: 2048 # VLM dim
+    diffusion_model_cfg:    # DiT Transformers 的参数
+      cross_attention_dim: 2048 # VLM 的 dim
       dropout: 0.2
       final_dropout: true
       interleave_self_attention: true
       norm_type: "ada_norm"
-      num_attention_heads: 32
       num_layers: 16
       output_dim: 1024
       positional_embeddings: null
+
+
 
 datasets:
   vlm_data:
@@ -68,31 +54,31 @@ datasets:
     base_interval: 2
     max_pixels: 50176
     min_pixels: 784
-    model_max_length: 2048 # seems to be 4096 here, some related content is not processed
+    model_max_length: 2048
     model_type: qwen2.5vl
     per_device_batch_size: 4
 
   vla_data:
     dataset_py: lerobot_datasets
-    data_root_dir: playground/Datasets/YOUR_DATASET_PATH
-    data_mix: YOUR_DATASET_NAME
-    action_type: delta_ee 
+    data_root_dir: playground/Datasets/OXE_LEROBOT_DATASET
+    data_mix: bridge_rt_1 # bridge_rt_1
+    action_type: delta_ee
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
     CoT_answer: bbox
-    default_image_resolution: [3, 224, 224] # this is not effective
+    default_image_resolution: [3, 224, 224]
     per_device_batch_size: 16
-    load_all_data_for_training: true # consider how to enable eval set
-    obs: ["image_0"] # this is not effective
-    image_size: [224,224] #todo is null keep raw size # this is not effective
+    load_all_data_for_training: true
+    obs: ["image_0"]
+    image_size: [224,224]
 
 trainer:
-  epochs: 100 # decide whether to use, he and max_train_steps conflict
+  epochs: 100
   max_train_steps: 100000
   num_warmup_steps: 5000
   save_interval: 5000
   eval_interval: 100
-  learning_rate: # you can set different lr for different modules
-    base: 5e-05
+  learning_rate:
+    base: 1e-05
     qwen_vl_interface: 1.0e-05
     action_model: 1.0e-04
   lr_scheduler_type: cosine_with_min_lr

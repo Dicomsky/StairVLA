@@ -13,12 +13,12 @@ from torch.distributions import Beta
 from transformers import PretrainedConfig
 from transformers.feature_extraction_utils import BatchFeature
 
-from starVLA.model.modules.action_model.follow_match_header.action_encoder import (
+from starVLA.model.modules.action_model.flow_matching_head.action_encoder import (
     SinusoidalPositionalEncoding,
     swish,
 )
 
-from starVLA.model.modules.action_model.follow_match_header.cross_attention_dit import DiT, SelfAttentionTransformer
+from starVLA.model.modules.action_model.flow_matching_head.cross_attention_dit import DiT, SelfAttentionTransformer
 
 # TODO try to meger DiT Modules with follow_match_head, they are just the same arch, but diff loss, use diffusers package will be simple
 
@@ -207,21 +207,38 @@ class FlowmatchingActionHeadConfig(PretrainedConfig):
             setattr(self, key, value)
 
 
+DiTConfig = {
+    "DiT-B": {"input_embedding_dim": 768, "attention_head_dim": 64, "num_attention_heads": 12},
+    "DiT-L": {"input_embedding_dim": 1536, "attention_head_dim": 48, "num_attention_heads": 32},
+}
+
 class FlowmatchingActionHead(nn.Module):
     def __init__(
         self,
         full_config,
     ):
         super().__init__()
-        config = full_config.framework.fm_head_config
+        config = full_config.framework.action_model
         self.hidden_size = config.hidden_size
-        self.input_embedding_dim = config.input_embedding_dim
+        
+        action_model_type = config.action_model_type
+        action_model_cfg = DiTConfig[action_model_type]
+        
+        self.input_embedding_dim = action_model_cfg["input_embedding_dim"]
+
 
         diffusion_model_cfg = config.diffusion_model_cfg
+        diffusion_model_cfg = {**action_model_cfg, **diffusion_model_cfg}
         self.model = DiT(**diffusion_model_cfg)
         self.action_dim = config.action_dim
         self.action_horizon = config.future_action_window_size + 1
         self.num_inference_timesteps = config.num_inference_timesteps
+
+        self.state_encoder = MLP(
+            input_dim=config.state_dim,
+            hidden_dim=self.hidden_size,
+            output_dim=self.input_embedding_dim,
+        ) if config.state_dim else None
 
         self.action_encoder = ActionEncoder(
             action_dim=config.action_dim,
@@ -251,7 +268,7 @@ class FlowmatchingActionHead(nn.Module):
         return BatchFeature(data=batch)
 
 
-    def forward(self, vl_embs: torch.Tensor, actions: torch.Tensor):
+    def forward(self, vl_embs: torch.Tensor, actions: torch.Tensor, state: torch.Tensor = None):
         """
         vl_embs: shape (B, seq_length, feature_dim)
         actions: shape (B, future_action_window_size, D_action)
@@ -270,6 +287,11 @@ class FlowmatchingActionHead(nn.Module):
         t_discretized = (t[:, 0, 0] * self.num_timestep_buckets).long()
         action_features = self.action_encoder(noisy_trajectory, t_discretized)
 
+
+        # embed state
+        state_features = self.state_encoder(state) if state is not None else None
+
+
         # Maybe add position embedding.
         if self.config.add_pos_embed:
             pos_ids = torch.arange(action_features.shape[1], dtype=torch.long, device=device)
@@ -278,7 +300,8 @@ class FlowmatchingActionHead(nn.Module):
 
         # Join vision, language, state and action embedding along sequence dimension.
         future_tokens = self.future_tokens.weight.unsqueeze(0).expand(vl_embs.shape[0], -1, -1)
-        sa_embs = torch.cat((future_tokens, action_features), dim=1)
+        sa_embs = torch.cat((state_features, future_tokens, action_features), dim=1) \
+            if state_features is not None else torch.cat((future_tokens, action_features), dim=1)
 
 
         model_output = self.model(
@@ -295,7 +318,7 @@ class FlowmatchingActionHead(nn.Module):
         return loss
 
     @torch.no_grad()
-    def get_action(self, vl_embs: torch.Tensor) -> torch.Tensor:
+    def predict_action(self, vl_embs: torch.Tensor, state: torch.Tensor = None) -> torch.Tensor:
         # Set initial actions as the sampled noise.
         batch_size = vl_embs.shape[0]
         device = vl_embs.device
@@ -307,6 +330,8 @@ class FlowmatchingActionHead(nn.Module):
 
         num_steps = self.num_inference_timesteps
         dt = 1.0 / num_steps
+        
+        state_features = self.state_encoder(state) if state is not None else None
 
         # Run denoising steps.
         for t in range(num_steps):
@@ -326,10 +351,8 @@ class FlowmatchingActionHead(nn.Module):
 
             # Join vision, language, state and action embedding along sequence dimension.
             future_tokens = self.future_tokens.weight.unsqueeze(0).expand(vl_embs.shape[0], -1, -1)
-            sa_embs = torch.cat((future_tokens, action_features), dim=1)
-
-            # # TODO: whether state is a must
-            # sa_embs = action_features
+            sa_embs = torch.cat((state_features, future_tokens, action_features), dim=1) \
+                if state_features is not None else torch.cat((future_tokens, action_features), dim=1)
 
 
             # Run model forward.
@@ -354,6 +377,21 @@ class FlowmatchingActionHead(nn.Module):
     def dtype(self):
         return next(iter(self.parameters())).dtype
 
+
+
+def get_action_model(config=None):
+    """
+    Factory: build FlowmatchingActionHead from global framework config.
+    
+    Args:
+        config: Global config (expects config.framework.action_model namespace).
+
+    Returns:
+        FlowmatchingActionHead: Initialized FlowMatchingActionHead.
+    """
+    return FlowmatchingActionHead(
+        full_config=config
+    )
 
 
 
