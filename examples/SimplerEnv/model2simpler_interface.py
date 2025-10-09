@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 from starVLA.model.framework.share_tools import read_mode_config
-from starVLA.model.framework.M1 import InternVLA_M1
+from starVLA.model.framework.base_framework import baseframework
 
 
 class M1Inference:
@@ -43,7 +43,7 @@ class M1Inference:
 
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
         if policy_setup == "widowx_bridge":
-            unnorm_key = "bridge_dataset" if unnorm_key is None else unnorm_key
+            unnorm_key = "oxe_bridge" if unnorm_key is None else unnorm_key
             action_ensemble = action_ensemble
             adaptive_ensemble_alpha = adaptive_ensemble_alpha
             if action_ensemble_horizon is None:
@@ -51,7 +51,7 @@ class M1Inference:
                 action_ensemble_horizon = 7
             self.sticky_gripper_num_repeat = 1
         elif policy_setup == "google_robot":
-            unnorm_key = "fractal20220817_data" if unnorm_key is None else unnorm_key
+            unnorm_key = "oxe_rt1" if unnorm_key is None else unnorm_key
             action_ensemble = action_ensemble
             adaptive_ensemble_alpha = adaptive_ensemble_alpha
             if action_ensemble_horizon is None:
@@ -228,7 +228,7 @@ class M1Inference:
         policy_ckpt_path = Path(policy_ckpt_path)
         model_config, norm_stats = read_mode_config(policy_ckpt_path)  # read config and norm_stats
 
-        unnorm_key = InternVLA_M1._check_unnorm_key(norm_stats, unnorm_key)
+        unnorm_key = baseframework._check_unnorm_key(norm_stats, unnorm_key)
         return norm_stats[unnorm_key]["action"]
 
 

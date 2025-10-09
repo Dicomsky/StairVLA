@@ -29,7 +29,7 @@ accelerate launch \
   --num_processes 8 \
   InternVLA/training/train_internvla.py \
   --config_yaml ./InternVLA/config/training/internvla_cotrain_libero.yaml \
-  --framework.framework_py ${Framework_name} \
+  --framework.name ${Framework_name} \
   --framework.action_model.action_hidden_dim ${action_input_dim} \
   --framework.qwenvl.base_vlm ${base_vlm} \
   --datasets.vla_data.per_device_batch_size 16 \

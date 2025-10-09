@@ -31,27 +31,31 @@ def build_framework(cfg):
     Build a framework model from config.
     Args:
         cfg: Config object (OmegaConf / namespace) containing:
-             cfg.framework.framework_py: Identifier string (e.g. "InternVLA-M1")
+             cfg.framework.name: Identifier string (e.g. "InternVLA-M1")
     Returns:
         nn.Module: Instantiated framework model.
     """
-    if cfg.framework.framework_py == "InternVLA-M1":
+
+    if not hasattr(cfg.framework, "name"): 
+        cfg.framework.name = cfg.framework.framework_python  # 兼容旧配置yaml
+
+    if cfg.framework.name == "InternVLA-M1":
         from starVLA.model.framework.M1 import InternVLA_M1
         return InternVLA_M1(cfg)
-    elif cfg.framework.framework_py == "QwenOFT":
+    elif cfg.framework.name == "QwenOFT":
         from starVLA.model.framework.QwenOFT import Qwenvl_OFT
         return Qwenvl_OFT(cfg)
-    elif cfg.framework.framework_py == "QwenFast":
+    elif cfg.framework.name == "QwenFast":
         from starVLA.model.framework.QwenFast import Qwenvl_Fast
         return Qwenvl_Fast(cfg)
-    elif cfg.framework.framework_py == "QwenFM":
+    elif cfg.framework.name == "QwenFM":
         from starVLA.model.framework.QwenFM import Qwenvl_FMHead
         return Qwenvl_FMHead(cfg)
     
     # auto detect from registry
-    framework_id = cfg.framework.framework_py
+    framework_id = cfg.framework.name
     if framework_id not in FRAMEWORK_REGISTRY._registry:
-        raise NotImplementedError(f"Framework {cfg.framework.framework_py} is not implemented.")
+        raise NotImplementedError(f"Framework {cfg.framework.name} is not implemented.")
     
     MODLE_CLASS = FRAMEWORK_REGISTRY[framework_id]
     return MODLE_CLASS(cfg)
