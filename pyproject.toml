@@ -62,7 +62,7 @@ exclude = [
     "*.pyc",         # compiled Python file
     "*.pyo",          # optimized Python file
     "**bar**",
-    "InternVLA/config",
+    "starVLA/config",
 
 ]
 

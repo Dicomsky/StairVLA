@@ -26,10 +26,6 @@ if pkg_path is not None:
     for _, module_name, _ in pkgutil.iter_modules(pkg_path):
         importlib.import_module(f"{__name__}.{module_name}")
 
-if pkg_path is not None:
-    print("✅ 已注册框架：", FRAMEWORK_REGISTRY.list())
-
-
 def build_framework(cfg):
     """
     Build a framework model from config.
@@ -52,6 +48,7 @@ def build_framework(cfg):
         from starVLA.model.framework.QwenFM import Qwenvl_FMHead
         return Qwenvl_FMHead(cfg)
     
+    # auto detect from registry
     framework_id = cfg.framework.framework_py
     if framework_id not in FRAMEWORK_REGISTRY._registry:
         raise NotImplementedError(f"Framework {cfg.framework.framework_py} is not implemented.")

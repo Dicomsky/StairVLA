@@ -9,7 +9,7 @@ Key Points:
   - Autoregressive action tokens derived from discretized / symbolized continuous actions
 
 Note: How to add special tokens to Qwen2.5:
-  /InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+  /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 """
 
 from typing import List
@@ -231,7 +231,7 @@ if __name__ == "__main__":
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
 
-    config_yaml = "InternVLA/config/training/internvla_cotrain_oxe.yaml"
+    config_yaml = "starVLA/config/training/internvla_cotrain_oxe.yaml"
     cfg = OmegaConf.load(config_yaml)
     cfg.framework.qwenvl.base_vlm = "playground/Pretrained_models/nora"
 

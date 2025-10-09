@@ -354,7 +354,7 @@ if __name__ == "__main__":
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
 
-    config_yaml = "InternVLA/config/training/internvla_cotrain_oxe.yaml"
+    config_yaml = "starVLA/config/training/internvla_cotrain_oxe.yaml"
     cfg = OmegaConf.load(config_yaml)
 
     # try get model

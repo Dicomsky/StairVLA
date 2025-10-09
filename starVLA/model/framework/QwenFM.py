@@ -10,7 +10,7 @@ Key Points:
   - Continuous action prediction via L1 regression over the action special token hidden states
 
 Note: How to add special tokens to Qwen2.5:
-  See /InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+  See /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 """
 from typing import List
 from tqdm import tqdm

@@ -10,7 +10,7 @@ Key Points:
   - Continuous action prediction via L1 regression over the action special token hidden states
 
 Note: How to add special tokens to Qwen2.5:
-  See /InternVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+  See /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 """
 from typing import List
 from tqdm import tqdm
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
 
-    config_yaml = "InternVLA/config/training/internvla_cotrain_oxe.yaml"
+    config_yaml = "starVLA/config/training/internvla_cotrain_oxe.yaml"
     cfg = OmegaConf.load(config_yaml)
     cfg.framework.action_model.action_hidden_dim = 2048
     # try get model

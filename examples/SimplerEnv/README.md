@@ -112,7 +112,7 @@ This script will automatically launch the WidowX Robot evaluation tasks, reprodu
 
 ## Data Preparation
 1. Prepare the OXE data following the GR00T / Open-X Embodiment procedure (download + convert). Keep only the subsets you need (e.g. bridge / rt1, etc.).
-2. YAML parameter snippet (InternVLA/config/training/internvla_cotrain_oxe.yaml):
+2. YAML parameter snippet (starVLA/config/training/internvla_cotrain_oxe.yaml):
 ```
 datasets:
   vla_data:
@@ -122,7 +122,7 @@ datasets:
 ```
 3. Make sure you can load batched data:
 ```bash
-python InternVLA/dataloader/lerobot_datasets.py --config_yaml InternVLA/config/training/internvla_cotrain_oxe.yaml
+python starVLA/dataloader/lerobot_datasets.py --config_yaml starVLA/config/training/internvla_cotrain_oxe.yaml
 ```
 
 ## Training
