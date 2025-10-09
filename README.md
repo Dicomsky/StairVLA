@@ -1,9 +1,7 @@
 # StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing
-StarVLA is a modular and flexible codebase for developing Vision-Language Model (VLM) to Vision-Language-Action (VLA) models.
-In StarVLA (also a pun on “start VLA” ),  each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion and low coupling principle, which enabling plug-and-play design, rapid prototyping, and independent debugging.
-The goal is to make VLA development as simple as building with Lego bricks—without modifying the global system—and to quickly integrate with a variety of benchmarks for validation.
-
-
+StarVLA is a modular and flexible codebase for developing *Vision-Language Model (VLM) to Vision-Language-Action (VLA) models*.
+In StarVLA (also a pun on “start VLA”),  each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion and low coupling principle, which enabling plug-and-play design, rapid prototyping, and independent debugging.
+The goal is to make VLA development as simple as building with Lego bricks—without modifying the global system, and to quickly integrate with a variety of benchmarks for validation.
 
 
 ![](assets/starVLA_v1.png)
@@ -28,9 +26,10 @@ The goal is to make VLA development as simple as building with Lego bricks—wit
 <p align="center">
   <img src="assets/simplerEnv.png" alt="SimplerEnv modules" width="85%">
 </p>
+* Qwen-FAST and Qwen-OFT were trained on 16×A100 GPUs for 10k steps (~3 hours), while Qwen-FM and Qwen-Dual were trained for 20k steps (~8 hours).
 
 
-
+---
 </details>
 
 <details close>
@@ -56,105 +55,156 @@ The goal is to make VLA development as simple as building with Lego bricks—wit
 
 </details>
 
-
-
-
-
-<!-- ## 🔍 Why StarVLA?
-
-
-Pains in the community:
-- Tight coupling of code: data / model / inference / environment are bound together, making migration and reuse costly 
-- Opaque training / inference pipeline: forward / inference call chains are hard to trace  
-- Non‑uniform benchmarks / baselines: inconsistent evaluation setups and data assumptions hinder fair comparison  
-- High barrier for the broader CV/NLP community
-
-<!-- StarVLA solutions:
-- **Modular & Extensible**: Clear module boundaries; each (framework / dataloader / trainer / serving) can be understood & debugged in a single `python your_framwork.py`
-- **Explicit & Traceable Pipeline**: 统一 `forward()/predict_action()` 入口，预处理集中在 framework；调用链易追踪
-- **Unified Inference & Evaluation Interface**: WebSocket policy server + simulator adapters decouple training vs. evaluation and simulation vs. real robot, exposing a single action API -->
-
---- -->
+---
 
 ## 🌟 How does starVLA make model development Lego-like again?
 👇 StarVLA achieves “Lego-like” development via the following designs:
-
 <a id="model"></a>
 <details close>
-<summary><b>1. Model: Modular & Extensible Framework</b></summary>
+<summary><b>1. Smoke test any submodule </b></summary>
 
-StarVLA emphasizes modular model design, following top‑down decomposition and a principle of high cohesion & low coupling. We define the following conventions:
+StarVLA emphasizes a modular model design. Each major framework file can be run standalone for rapid debugging and smoke test your code. For example:
 
-1. `starVLA.model.framework.yourframework.py` is the only external API of the model; it should correspond to (be isomorphic with) the framework figure in your paper.  
-2. Each `yourframework.py` or `module.py` can run standalone (e.g., `python yourframework.py` to demo forward + inference).  
+```bash
+# model
+python starVLA/model/framework/QwenOFT.py --config_yaml internvla_cotrain_oxe.yaml
+# dataloader
+python starVLA/dataloader/lerobot_datasets.py --config_yaml internvla_cotrain_oxe.yaml
 
+```
+Note: `starVLA/model/framework/yourframework.py` is the single external API surface of the model; it should mirror (be structurally isomorphic to) the framework diagram in your paper.
 </details>
-
-
 <a id="data"></a>
 <details close>
-<summary><b>2. DataLoader: Model-Agnostic Data Processing</b></summary>
+<summary><b>2. Explicit model boundaries</b></summary>
 
-Best practice references: GR00T / LeRobot action data schemas; multimodal data can reuse LLaVA JSON style. Conventions:
+StarVLA follows top‑down decomposition and the principle of high cohesion & low coupling.
 
-1. Dataloader returns raw data: `PIL.Image`, `str`, normalized actions, state, etc. Must return a single dict
-2. Any model‑specific preprocessing should not be processing in dataloader,  but only lives inside `yourframework.forward()`
-Dataloader saves any data-processing contexts (normalization stats, transforms, etc.) to the output path.
-3. Each `dataset.py` should been run standalone and print/validate one legal sample dict. e.g., `python lerobot_datasets.py`.
+For example:
+- Dataloader
+  - Returns a raw, model‑agnostic dict only; no model‑specific preprocessing (e.g., tokenizer, image encoding).
+  - A single sample should include (add/remove as needed):
+    - image: list[PIL.Image] | np.ndarray
+    - lang: str
+    - action: np.ndarray[T, action_dim]
+    - state: Optional[np.ndarray[..., state_dim]]
 
+Both `framework.forward()` and `framework.predict_action()` operate directly on raw inputs, keeping train/test boundaries explicit and easy to hack.
 </details>
-
-
- 
 <a id="config"></a>
 <details close>
-<summary><b>3. Config System: Global & Extensible Unified Configuration</b></summary>
+<summary><b>3. Flexible configuration system</b></summary>
 
-StarVLA uses a single global configuration object; all parameter accesses should follow absolute (fully qualified) keys.
-The configuration is read from `config_yaml` and converted into an `OmegaConf DictConfig`, which permits redundancy, flexible grouping, and easy addition of new parameters.
-
-Conventions:
-1. Use `OmegaConf.load(args.config_yaml)` as the single configuration entry; standalone debugging also uses `args.config_yaml`.
-2. Parameters may be intentionally redundant; you can freely add or override them via the CLI. Example:
-`--framework.name Qwen-OFT` to overwite and  `--framework.action_model.new_arg ${action_type}` for adding new arg.
-3. Config snapshot: save the unified config in the output directory so experiments can be restarted quickly.
+StarVLA uses a single global configuration object
+Parameters are passed primarily via extensible dicts, allowing overrides and controlled redundancy.
 
 </details>
 
 
-<a id="trainer"></a>
-<details close>
-<summary><b>4. Trainer: Lightweight & Strategy-Oriented</b></summary>
-
-StarVLA’s trainer is built directly on native PyTorch + Accelerate + DeepSpeed, keeping the loop explicit and easy to hack.
-
-Conventions:
-1. Store runtime state in dicts where possible (simplifies data info, procesing info, config, etc).  
-2. Use multiple dataloaders to adapt heterogeneous data types / task mixtures.  
-3. Put each training strategy in its own `trainer_*.py` file (avoid large if‑else chains).  
-
-</details>
-
-<a id="inference"></a>
-<details close>
-<summary><b>5. Inference: Unified WebSocket Abstraction</b></summary>
-
-StarVLA uses a unified WebSocket layer to decouple complex training and evaluation environments, providing an environment-agnostic inference interface (`deployment/model_server`) and simulator-specific adapters (e.g., `model2simpler_interface.py`).
-
-Conventions:
-1. `policy_server.py` exposes only the core inference call: `framework.predict_action()`  
-2. Disallow ad‑hoc test‑time and simulator‑specific  on‑the‑fly parameter injection (e.g., extra un‑normalization flags, stats, execution heuristics) to preserve a stable, reproducible evaluation pipeline.
-3. Provide per‑environment policy clients (e.g., `examples/SimplerEnv/model2simpler_interface.py`) that handle connection, request packing, retries, and action post‑processing for vairous benchmarks.
-
-</details>
-
+🧪 *To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our usability target: an internal developer can stand up a new VLA framework in under half a day, and an external user can build their first custom VLA framework within a single day. More design insights for each item can be found in [assets/intro_v1.md](assets/intro_v1.md).*
 
 
 
 ---
 
-***To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our usability target: an internal developer can stand up a new VLA framework in under half day, and an external user can build their first custom VLA framework within a single day.***
+## 🚀 Quick Start
 
+<details close>
+<summary><b>🛠 Environment Setup
+</b></summary>
+
+
+
+```bash
+# Clone the repo
+git clone https://github.com/InternRobotics/InternVLA-M1
+
+# Create conda environment
+conda create -n internvla-m1 python=3.10 -y
+conda activate internvla-m1
+
+# Install requirements
+pip install -r requirements.txt
+
+# Install FlashAttention2
+pip install flash-attn --no-build-isolation
+
+# Install InternVLA-M1
+pip install -e .
+```
+</details>
+
+<details close>
+<summary><b>👀 Sanity check environment
+</b></summary>
+
+```bash
+# check framework with fake examples
+python starVLA/model/framework/QwenFM.py
+```
+
+
+It should build successfully and `print(model)`. You can also call `model.forward(fake_data)` and obtain unnormalized actions via `model.predict_action(fake_data)`.
+</details>
+
+<details close>
+<summary><b>🧪 Eval SimplerEnv
+</b></summary>
+
+The evaluation pipeline is adapted from [InternVLA-M1](https://github.com/InternRobotics/InternVLA-M1/examples/SimplerEnv)
+
+We also provide a parallel evaluation script:
+
+  ```bash
+  check_pt=0723_v6_vla_dino_32/checkpoints/steps_10000_pytorch_model.pt
+  bash examples/SimplerEnv/eval_scripts/star_bridge.sh ${check_pt}
+  ```
+
+Before running, edit these variables directly at the top of `star_bridge.sh`.
+
+</details>
+
+
+<details close>
+<summary><b>🚀 Training on OXE
+</b></summary>
+
+
+Our training pipeline follows [InternVLA-M1](https://github.com/InternRobotics/InternVLA-M1/examples/SimplerEnv).
+
+Steps:
+1) Prepare a LeRobot-format OXE dataset, including `modality.json`. Refer to [GR00T N1.5](https://github.com/NVIDIA/Isaac-GR00T/tree/main/examples/SimplerEnv).
+2) Add your dataset path to `config.yaml`:
+    ```yaml
+    datasets:
+      vla_data:
+        dataset_py: lerobot_datasets
+        data_root_dir: playground/Datasets/OXE_LEROBOT_DATASET  # path to your dataset
+        data_mix: bridge_rt_1
+    ```
+3) Run with Accelerate:
+    ```bash
+    base_vlm=Qwen/Qwen2.5-VL-3B-Instruct
+    Framework_name=QwenFM
+    run_root_dir=./results
+    run_id=${Framework_name}
+
+    accelerate launch \
+      --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
+      --num_processes 8 \
+      starVLA/training/train_internvla.py \
+      --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
+      --framework.framework_py ${Framework_name} \
+      --framework.qwenvl.base_vlm ${base_vlm} \
+      --run_root_dir ${run_root_dir} \
+      --run_id ${run_id} \
+      --wandb_project your_project \
+      --wandb_entity your_name
+    ```
+
+Note: `run_root_dir` stores the unified config snapshot and data‑processing metadata for reproducibility and quick restarts.
+
+</details>
 
 ## 📖 FAQ
 
@@ -168,7 +218,28 @@ A: We profiled it: data preprocessing takes <1% time. Keeping it inside the Fram
 <details close>
 <summary><b>Q: Can I use a backbone other than Qwen2.5-VL?</b></summary>
 
-A: Yes. Implement new vision + language modules and compose them inside a Framework; any base model can be swapped in (examples coming soon).
+A: Yes. Implement new vision + language modules and compose them inside a Framework; any other existing models can be swapped in. yet, due to framework precessing raw action data, it is very easy to swapped in.
+</details>
+
+<details close>
+<summary><b>Q: Can I override or add parameters via the terminal?</b></summary>
+
+A: Yes. We use OmegaConf.load(args.config_yaml) as the single configuration entry; standalone debugging also uses args.config_yaml. Parameters may be intentionally redundant; you can freely add or override them via the CLI.
+
+Examples:
+```bash
+accelerate launch \
+  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml  \
+  --num_processes 8 \
+  starVLA/training/train_internvla.py \
+  --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
+  --framework.name QwenOFT \ # override framework choice
+  --framework.action_model.new_module ${module_name} \ # plug-in a new module to action model
+```
+
+⚠️: `framework.action_model.new_module` only adds to the global config; its behavior is on your framework.
+
+
 </details>
 
 <details close>
@@ -185,7 +256,7 @@ A: Yes. StarVLA uses a regex / name list to control freezing. Example:
 <details close>
 <summary><b>Q: Can I set different learning rates for different modules?</b></summary>
 
-A: Yes. Config example:
+A: Yes, starVLA also uses name: value dict to control learning group. Config example:
 ```yaml
 trainer:
   learning_rate:
@@ -193,19 +264,19 @@ trainer:
     qwen_vl_interface: 1.0e-05
     action_model: 1.0e-04
 ```
-(Also referenced in `TrainerUtils.freeze_backbones`.)
+(Also referenced in `trainer_tools.build_param_lr_groups`.)
 </details>
 
 <details close>
 <summary><b>Q: Can I resume training from a checkpoint?</b></summary>
 
-A: Yes. Specify the latest checkpoint path in `config.yaml`, e.g.:
+A: Yes, somehow can. Specify the latest checkpoint path in `config.yaml`, e.g.:
 ```yaml
 trainer:
   pretrained_checkpoint: path_to_steps_10000.pt
   reload_modules: "action_model,layer_qformer"
 ```
-Empty means full load. (Optimizer state not saved to reduce memory/disk; limited benefit for loading Optimizer state.)
+Empty `reload_modules` means full load all model. However, starVLA does not save  `optimizer state`. It requires a lot of  memory/disk and bring limited benefit.
 </details>
 
 
@@ -222,6 +293,6 @@ Empty means full load. (Optimizer state not saved to reduce memory/disk; limited
 
 
 ##  🙏 Acknowledgements
-References & inspiration: LeRobot, GR00T, DeepSpeed, various open‑source VLM / control projects.  
+References & inspiration: LeRobot, GR00T, DeepSpeed, QWEN.  
 Codebase originally forked from InternVLA-M1
 

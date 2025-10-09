@@ -37,7 +37,7 @@ def build_framework(cfg):
     """
 
     if not hasattr(cfg.framework, "name"): 
-        cfg.framework.name = cfg.framework.framework_python  # 兼容旧配置yaml
+        cfg.framework.name = cfg.framework.framework_py # 兼容旧配置yaml
 
     if cfg.framework.name == "InternVLA-M1":
         from starVLA.model.framework.M1 import InternVLA_M1

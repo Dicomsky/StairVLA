@@ -601,19 +601,18 @@ def make_vlm_dataloader(cfg):
 from transformers import AutoTokenizer, AutoProcessor
 
 if __name__ == "__main__":
-    # each file should be able to be debugged and tested independently
-
-    # data config
-    #
     import debugpy
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_yaml", type=str, default="./starVLA/config/training/internvla_cotrain_oxe.yaml", help="Path to YAML config")
+    args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
 
-    # Load YAML config & Convert CLI overrides to dotlist config
-    config_yaml = "path to yaml config"
-    cfg = OmegaConf.load(config_yaml)
+    cfg = OmegaConf.load(args.config_yaml)
+    
     data_args = cfg.datasets.vlm_data
     image_processor = AutoProcessor.from_pretrained(
         cfg.framework.qwenvl.base_vlm,
