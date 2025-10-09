@@ -115,3 +115,31 @@ def print_freeze_status(self):
             for pname, pstate in info["params"]:
                 print(f"    {pname:60s}  |  {pstate}")
     print("=========================\n")
+
+
+
+class Registry:
+    def __init__(self, name: str):
+        self.name = name
+        self._registry = {}
+
+    def register(self, key: str):
+        """装饰器：注册构建函数或类"""
+        def decorator(framework_class):
+            if key in self._registry:
+                raise KeyError(f"{key} 已经注册到 {self.name} 注册表中")
+            self._registry[key] = framework_class
+            return framework_class
+        return decorator
+    
+    def __getitem__(self, key):
+        return self._registry[key]
+    
+    def list(self):
+        """
+        查看当前已注册的键; with_values=True 时返回 {key: value_obj} 映射。
+        value 用类名更直观也可以改成 framework.__name__。
+        """
+        return {k: v for k, v in self._registry.items()}
+
+FRAMEWORK_REGISTRY = Registry("frameworks")

@@ -33,9 +33,10 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
 from starVLA.model.modules.action_model.flow_matching_ActionHeader import get_action_model, FlowmatchingActionHead
-from starVLA.training.trainer_utils.metrics import resize_images
+from starVLA.training.trainer_utils.trainer_tools import resize_images
+from starVLA.model.tools import FRAMEWORK_REGISTRY
 
-
+@FRAMEWORK_REGISTRY.register("QwenFM")
 class Qwenvl_FMHead(baseframework):
     """
     Multimodal vision-language-action model.
@@ -194,12 +195,6 @@ class Qwenvl_FMHead(baseframework):
         return {"normalized_actions": normalized_actions}
 
 
-def build_model_framework(config: dict = {}) -> Qwenvl_FMHead:
-    """
-    工厂方法：返回简化版 Qwenvl_FMHead
-    """
-    model = Qwenvl_FMHead(config=config)
-    return model
 
 
 if __name__ == "__main__":
@@ -215,7 +210,7 @@ if __name__ == "__main__":
     config_yaml = "starVLA/config/training/internvla_cotrain_custom.yaml"
     cfg = OmegaConf.load(config_yaml)
     # try get model
-    model: Qwenvl_FMHead = build_model_framework(cfg)
+    model: Qwenvl_FMHead = Qwenvl_FMHead(cfg)
     print(model)
 
     # try forward model

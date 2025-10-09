@@ -19,6 +19,8 @@ from qwen_vl_utils import process_vision_info
 
 
 from starVLA.training.trainer_utils import initialize_overwatch
+from starVLA.model.tools import FRAMEWORK_REGISTRY
+
 
 logger = initialize_overwatch(__name__)
 
@@ -33,6 +35,7 @@ from starVLA.model.modules.dino_model.dino import get_dino_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
 
+@FRAMEWORK_REGISTRY.register("InternVLA-M1")
 class InternVLA_M1(baseframework):
     """
     Multimodal vision-language-action model.
@@ -341,20 +344,6 @@ class InternVLA_M1(baseframework):
         return outputs
 
 
-def build_model_framework(config: dict = {}) -> InternVLA_M1:
-    """
-    Factory helper to build InternVLA_M1 with provided config.
-
-    Args:
-        config: Dict or OmegaConf containing framework/component settings.
-
-    Returns:
-        InternVLA_M1: Initialized model instance.
-    """
-    model = InternVLA_M1(config=config)
-    return model
-
-
 if __name__ == "__main__":
     from omegaconf import OmegaConf
 
@@ -369,7 +358,7 @@ if __name__ == "__main__":
     cfg = OmegaConf.load(config_yaml)
 
     # try get model
-    model = build_model_framework(cfg)
+    model = InternVLA_M1(cfg)
     print(model)
 
     model_path = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt"

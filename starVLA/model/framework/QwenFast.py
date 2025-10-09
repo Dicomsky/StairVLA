@@ -24,6 +24,8 @@ from qwen_vl_utils import process_vision_info
 
 
 from starVLA.training.trainer_utils import initialize_overwatch
+from starVLA.model.tools import FRAMEWORK_REGISTRY
+
 
 logger = initialize_overwatch(__name__)
 
@@ -35,7 +37,7 @@ from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
 from starVLA.model.modules.action_model.fast_ActionHeader import get_action_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
-
+@FRAMEWORK_REGISTRY.register("QwenFast")
 class Qwenvl_Fast(baseframework):
     """
     Multimodal vision-language-action model.
@@ -218,13 +220,6 @@ class Qwenvl_Fast(baseframework):
         return batch_fast_token_ids
 
 
-def build_model_framework(config: dict = {}) -> Qwenvl_Fast:
-    """
-    工厂方法：返回简化版 Qwenvl_OFT
-    """
-    model = Qwenvl_Fast(config=config)
-    return model
-
 
 if __name__ == "__main__":
     from omegaconf import OmegaConf
@@ -242,7 +237,7 @@ if __name__ == "__main__":
 
     cfg.framework.action_model.action_hidden_dim 
     # try get model
-    model = build_model_framework(cfg)
+    model = Qwenvl_Fast(cfg)
     print(model)
 
     # try forward model

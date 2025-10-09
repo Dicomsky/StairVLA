@@ -24,6 +24,8 @@ from PIL import Image
 
 
 from starVLA.training.trainer_utils import initialize_overwatch
+from starVLA.model.tools import FRAMEWORK_REGISTRY
+
 
 logger = initialize_overwatch(__name__)
 
@@ -35,7 +37,7 @@ from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
-
+@FRAMEWORK_REGISTRY.register("QwenOFT")
 class Qwenvl_OFT(baseframework):
     """
     Multimodal vision-language-action model.
@@ -251,13 +253,6 @@ class Qwenvl_OFT(baseframework):
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
 
-def build_model_framework(config: dict = {}) -> Qwenvl_OFT:
-    """
-    工厂方法：返回简化版 Qwenvl_OFT
-    """
-    model = Qwenvl_OFT(config=config)
-    return model
-
 
 if __name__ == "__main__":
     from omegaconf import OmegaConf
@@ -273,7 +268,7 @@ if __name__ == "__main__":
     cfg = OmegaConf.load(config_yaml)
     cfg.framework.action_model.action_hidden_dim = 2048
     # try get model
-    model = build_model_framework(cfg)
+    model = Qwenvl_OFT(cfg)
     print(model)
 
     # try forward model
