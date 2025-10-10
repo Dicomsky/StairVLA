@@ -233,7 +233,7 @@ accelerate launch \
   --num_processes 8 \
   starVLA/training/train_internvla.py \
   --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
-  --framework.name QwenOFT \ # override framework choice
+  --framework.qwenvl.base_vlm Qwen/Qwen2.5-VL-7B-Instruct \ # override framework choice
   --framework.action_model.new_module ${module_name} \ # plug-in a new module to action model
 ```
 
@@ -281,15 +281,33 @@ Empty `reload_modules` means full load all model. However, starVLA does not save
 
 
 
-## ✍️ Citation
-(BibTeX coming soon; placeholder)
+
+
+## ✍️ Citation & Copyright
+
+
+StarVLA is released under the MIT License, which permits commercial use, modification, distribution, and private use. Rebases are allowed for forks and feature branches; when rebasing from upstream StarVLA, use descriptive commit messages (e.g., "chore: rebase from StarVLA") and keep at least the two latest upstream commits as separate. See [License](LICENSE) for details.
+
+
 ```
 @misc{starvla2025,
   title  = {StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing},
-  author = {...},
+  author = {starVLA Community},
   year   = {2025}
 }
 ```
+
+
+## 🤝 Contributing
+
+
+1) If you find an issue, please open an Issue first. If it persists or needs clarification, start a Discussion and we’ll follow up.
+
+2) If you have ideas to improve StarVLA, feel free to open a PR. To make sure we will accept your effect, please align scope and design first via an Issue or by booking a short sync with this [Cooperation Form](https://forms.gle/R4VvgiVveULibTCCA).
+
+3) If you’re blocked or want to brainstorm, please fill out the [Cooperation Form](https://forms.gle/R4VvgiVveULibTCCA). We host office hours every Friday afternoon for live discussion.
+
+Tip: Before submitting a PR, run make check locally to pass formatting and lint.
 
 
 ##  🙏 Acknowledgements
