@@ -21,9 +21,6 @@ def auto_get_module_keys(module, max_depth=0, prefix_list=None, current_depth=0,
     return module_keys
 
 
-import torch.nn as nn
-
-
 def is_module_trainable(module):
     """
     check if a module is trainable: if the module itself has parameters, then all its parameters require_grad must be True;
@@ -127,7 +124,8 @@ class Registry:
         """装饰器：注册构建函数或类"""
         def decorator(framework_class):
             if key in self._registry:
-                raise KeyError(f"{key} 已经注册到 {self.name} 注册表中")
+                # print(ImportWarning(f"{key} 已经注册到 {self.name}"))
+                pass
             self._registry[key] = framework_class
             return framework_class
         return decorator

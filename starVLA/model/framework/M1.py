@@ -1,3 +1,6 @@
+# Copyright 2025 InternVLA-M1. All rights reserved.
+# Modified by [Jinhui YE/ HKUST University] in [2025]. 
+# Modification: [add fake sample and predict_action to match with starVLA].
 """
 InternVLA M1 framework:
 Vision-Language-Action diffusion model integrating:
@@ -361,32 +364,58 @@ if __name__ == "__main__":
     model = InternVLA_M1(cfg)
     print(model)
 
-    model_path = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt"
-    state_dict = torch.load(model_path, map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=True)
+    # fake sample 
+    image = Image.fromarray(np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8))
+    # Create a sample
+    sample = {
+        "action": np.random.uniform(-1, 1, size=(16, 7)).astype(np.float16), # action_chunk, action_dim
+        "image": [image, image], # two views
+        "lang": "This is a fake instruction for testing.",
+        # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
+    }
 
-    # try forward model
-    # can be fake sample， but here get from dataloader for simpler
-    from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
-
-    vla_dataset_cfg = cfg.datasets.vla_data
-    dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)
-
-    from torch.utils.data import DataLoader
-
-    train_dataloader = DataLoader(
-        dataset,
-        batch_size=2,
-        num_workers=1,  # For Debug
-        collate_fn=collate_fn,
-    )
-
-    for batch in tqdm(train_dataloader, desc="Processing Batches"):
-        batch
-        break
-
-    # try get model
+    batch  = [sample, sample]  # batch size 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    model(batch)
+    forward_output = model(batch)
+    action_loss = forward_output['action_loss']
+    print(f"Action Loss: {action_loss.item()}")
+
+    # test predict action
+    predict_output = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]])
+    normalized_actions = predict_output['normalized_actions']
+    print(f"Unnormalized Action: {normalized_actions}")
+
+
+
+
+    # model_path = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt"
+    # state_dict = torch.load(model_path, map_location="cpu")
+
+    # model.load_state_dict(state_dict, strict=True)
+
+    # # try forward model
+    # # can be fake sample， but here get from dataloader for simpler
+    # from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
+
+    # vla_dataset_cfg = cfg.datasets.vla_data
+    # dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)
+
+    # from torch.utils.data import DataLoader
+
+    # train_dataloader = DataLoader(
+    #     dataset,
+    #     batch_size=2,
+    #     num_workers=1,  # For Debug
+    #     collate_fn=collate_fn,
+    # )
+
+    # for batch in tqdm(train_dataloader, desc="Processing Batches"):
+    #     batch
+    #     break
+
+    # # try get model
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # model = model.to(device)
+    # model(batch)

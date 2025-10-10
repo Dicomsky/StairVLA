@@ -1,16 +1,15 @@
+
+# Copyright 2025 starVLA community. All rights reserved.
+# Licensed under the MIT License, Version 1.0 (the "License");
+# Implemented by [Junqiu YU / Fudan University] in [2025]. 
+# Design and Merged by [Jinhui YE / HKUST University] in [2025].
+
 """
-Qwen-OFT Framework
+Qwen-FM Framework 
+Equal to QwenVL + FlowMatching Action Head.
+A lightweight implementation that Qwen2.5-vl + Flow-matching head to directly predict continuous actions
+Flow-matching header is copyright from GR00T N1.5
 
-A lightweight implementation that uses an action special token to parallelly predict continuous actions
-conditioned on multi-view images plus a language instruction (shares parameters with the VLM).
-
-Key Points:
-  - Qwen2.5 vision-language backbone
-  - Injects an action special token into the VLM
-  - Continuous action prediction via L1 regression over the action special token hidden states
-
-Note: How to add special tokens to Qwen2.5:
-  See /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 """
 from typing import List
 from tqdm import tqdm
@@ -201,7 +200,7 @@ if __name__ == "__main__":
     import debugpy
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="./starVLA/config/training/internvla_cotrain_oxe.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="./starVLA/config/training/internvla_cotrain_custom.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))
@@ -213,36 +212,60 @@ if __name__ == "__main__":
     model: Qwenvl_FMHead = Qwenvl_FMHead(cfg)
     print(model)
 
-    # try forward model
-    # can be fake sample， but here get from dataloader for simpler
-    from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
 
-    vla_dataset_cfg = cfg.datasets.vla_data
-    dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)
+    # fake sample 
+    image = Image.fromarray(np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8))
+    # Create a sample
+    sample = {
+        "action": np.random.uniform(-1, 1, size=(16, 7)).astype(np.float16), # action_chunk, action_dim
+        "image": [image, image], # two views
+        "lang": "This is a fake instruction for testing.",
+        # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
+    }
 
-    from torch.utils.data import DataLoader
-
-    train_dataloader = DataLoader(
-        dataset,
-        batch_size=2,
-        num_workers=1,  # For Debug
-        collate_fn=collate_fn,
-    )
-    # zhe
-    for batch in tqdm(train_dataloader, desc="Processing Batches"):
-        batch
-        break
-
-    # try get model
+    batch  = [sample, sample]  # batch size 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    model(batch)
+    forward_output = model(batch)
+    action_loss = forward_output['action_loss']
+    print(f"Action Loss: {action_loss.item()}")
 
-    action = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]])
+    # test predict action
+    predict_output = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]])
+    normalized_actions = predict_output['normalized_actions']
+    print(f"Unnormalized Action: {normalized_actions}")
 
-    # fake state
-    for ba in batch:
-        ba["state"] = ba["action"][0][None]
 
-    model(batch)
-    action = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]], state=[batch[0]["state"]])
+    # # try forward model
+    # # can be fake sample， but here get from dataloader for simpler
+    # from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
+
+    # vla_dataset_cfg = cfg.datasets.vla_data
+    # dataset = get_vla_dataset(data_cfg=vla_dataset_cfg)
+
+    # from torch.utils.data import DataLoader
+
+    # train_dataloader = DataLoader(
+    #     dataset,
+    #     batch_size=2,
+    #     num_workers=1,  # For Debug
+    #     collate_fn=collate_fn,
+    # )
+    # # zhe
+    # for batch in tqdm(train_dataloader, desc="Processing Batches"):
+    #     batch
+    #     break
+
+    # # try get model
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # model = model.to(device)
+    # model(batch)
+
+    # action = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]])
+
+    # # fake state
+    # for ba in batch:
+    #     ba["state"] = ba["action"][0][None]
+
+    # model(batch)
+    # action = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]], state=[batch[0]["state"]])
