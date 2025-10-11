@@ -23,9 +23,12 @@ except NameError:
 
 # 自动导入所有 framework 子模块 import，触发注册
 if pkg_path is not None:
-    for _, module_name, _ in pkgutil.iter_modules(pkg_path):
-        importlib.import_module(f"{__name__}.{module_name}")
-
+    try:
+        for _, module_name, _ in pkgutil.iter_modules(pkg_path):
+            importlib.import_module(f"{__name__}.{module_name}")
+    except Exception as e:
+        print(f"Warning: Failed to auto-import framework submodules: {e}")
+        
 def build_framework(cfg):
     """
     Build a framework model from config.

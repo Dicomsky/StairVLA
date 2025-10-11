@@ -1,6 +1,7 @@
 # Copyright 2025 NVIDIA Corp. and affiliates. All rights reserved.
 # Modified by [Junqiu YU/ Fudan University] in [2025]. 
 # Modification: [rm and add some connect adapter to match with starVLA, e.g., "rm "].
+# Action repeat is inspired by CogACT
 
 
 
@@ -18,7 +19,7 @@ from starVLA.model.modules.action_model.flow_matching_head.action_encoder import
     swish,
 )
 
-from starVLA.model.modules.action_model.flow_matching_head.cross_attention_dit import DiT, SelfAttentionTransformer
+from starVLA.model.modules.action_model.flow_matching_head.cross_attention_dit import DiT
 
 # TODO try to meger DiT Modules with follow_match_head, they are just the same arch, but diff loss, use diffusers package will be simple
 
@@ -298,12 +299,12 @@ class FlowmatchingActionHead(nn.Module):
             pos_embs = self.position_embedding(pos_ids).unsqueeze(0)
             action_features = action_features + pos_embs
 
-        # Join vision, language, state and action embedding along sequence dimension.
+        # state and action embedding along sequence dimension.
         future_tokens = self.future_tokens.weight.unsqueeze(0).expand(vl_embs.shape[0], -1, -1)
         sa_embs = torch.cat((state_features, future_tokens, action_features), dim=1) \
             if state_features is not None else torch.cat((future_tokens, action_features), dim=1)
 
-
+        # Join VLM features with state and action embedding along sequence dimension.
         model_output = self.model(
             hidden_states=sa_embs,
             encoder_hidden_states=vl_embs,

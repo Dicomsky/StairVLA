@@ -1,11 +1,16 @@
-"""Fast Action Tokenizer Adapter
-"this file is adap from https://huggingface.co/physical-intelligence/fast"
+# Copyright 2025 starVLA community. All rights reserved.
+# Licensed under the MIT License, Version 1.0 (the "License"); 
+# Implemented by [Jinhui YE / HKUST University] in [2025].
 
-概述:
-    本模块封装了一个轻量级“动作 → 语言模型可读序列”转换器 (Fast_Action_Tokenizer)。
-    其核心目标是：把连续 / 离散的原始机器人动作（raw_actions）转换为
-    形如 <robot_action_12><robot_action_3><robot_action_87> ... 的伪自然语言 token 串，
-    便于直接拼接进多模态大模型 (VLM / LLM) 的对话模板，复用其语言建模能力进行动作预测。
+"""Fast Action Tokenizer Adapter
+"this file is adapted from https://huggingface.co/physical-intelligence/fast"
+
+Overview:
+    This module encapsulates a lightweight "action → language model-readable sequence" converter (Fast_Action_Tokenizer).
+    Its core objective is to convert continuous/discrete raw robot actions (raw_actions) into
+    pseudo-natural language token strings like <robot_action_12><robot_action_3><robot_action_87> ...
+    This facilitates direct integration into multimodal large models (VLM/LLM) dialogue templates,
+    leveraging their language modeling capabilities for action prediction.
 """
 
 import torch.nn as nn

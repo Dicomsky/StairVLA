@@ -27,7 +27,7 @@ IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
-from starVLA.model.modules.action_model.flow_matching_ActionHeader import get_action_model, FlowmatchingActionHead
+from starVLA.model.modules.action_model.GR00T_ActionHeader import get_action_model, FlowmatchingActionHead
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 from starVLA.model.tools import FRAMEWORK_REGISTRY
 
