@@ -33,11 +33,11 @@ cp $0 ${output_dir}/
 
 
 accelerate launch \
-  --config_file InternVLA/config/deepseeds/deepspeed_zero2.yaml \
+  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
   --num_processes 1 \
-  InternVLA/training/train_internvla_cotrain.py \
-  --config_yaml ./InternVLA/config/training/internvla_cotrain_oxe.yaml \
-  --framework.framework_py ${Framework_name} \
+  starVLA/training/train_internvla_cotrain.py \
+  --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
+  --framework.name ${Framework_name} \
   --framework.qwenvl.base_vlm ${base_vlm} \
   --datasets.vlm_data.dataset_use ${llavadata} \
   --datasets.vla_data.data_root_dir ${oxe_data_root}\

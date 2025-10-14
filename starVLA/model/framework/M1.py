@@ -390,7 +390,7 @@ if __name__ == "__main__":
 
 
 
-    # model_path = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt"
+    # model_path = "./results/Checkpoints/1_need/0906_bestvla_retrain_sota2/checkpoints/steps_50000_pytorch_model.pt"
     # state_dict = torch.load(model_path, map_location="cpu")
 
     # model.load_state_dict(state_dict, strict=True)

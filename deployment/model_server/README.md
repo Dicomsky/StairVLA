@@ -4,7 +4,7 @@
 
 ```bash
 
-your_ckpt=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenfast/checkpoints/steps_50000_pytorch_model.pt
+your_ckpt=./results/Checkpoints/1003_qwenfast/checkpoints/steps_50000_pytorch_model.pt
 
 python deployment/model_server/server_policy.py \
     --ckpt_path ${your_ckpt} \

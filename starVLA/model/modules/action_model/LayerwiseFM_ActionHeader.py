@@ -209,21 +209,18 @@ class FlowmatchingActionHeadConfig(PretrainedConfig):
 
 
 
-DiTConfig = { #@JinhuiYE TODO get from config
-"DiT-Qwen": {"num_layers": 37, "input_embedding_dim": 2048, "attention_head_dim": 64, "num_attention_heads": 32},
-}
 
 class LayerwiseFlowmatchingActionHead(nn.Module):
     def __init__(
         self,
         full_config,
+        **kwargs,
     ):
         super().__init__()
         config = full_config.framework.action_model
         self.hidden_size = config.hidden_size
-        
-        action_model_type = config.action_model_type
-        action_model_cfg = DiTConfig[action_model_type]
+
+        action_model_cfg = full_config.framework.action_model.DiTConfig
         self.input_embedding_dim = action_model_cfg["input_embedding_dim"]
 
         diffusion_model_cfg = config.diffusion_model_cfg

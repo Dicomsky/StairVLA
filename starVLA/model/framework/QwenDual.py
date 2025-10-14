@@ -3,9 +3,10 @@
 # Implemented by [Junqiu YU / Fudan University] in [2025]. 
 # Design and Merged by [Jinhui YE / HKUST University] in [2025].
 """
-Qwen-GR00T Framework
+Qwen-Dual Framework
 A lightweight implementation that Qwen2.5-vl + Flow-matching head to directly predict continuous actions
-Flow-matching header is copyright from GR00T N1.5,
+Flow-matching header is copyright from GR00T N1.5
+A dino as action obs
 """
 from typing import List
 from tqdm import tqdm
@@ -17,7 +18,7 @@ import numpy as np
 from PIL import Image
 
 
-
+from starVLA.model.modules.dino_model.dino import get_dino_model
 from starVLA.training.trainer_utils import initialize_overwatch
 
 logger = initialize_overwatch(__name__)
@@ -31,7 +32,7 @@ from starVLA.model.modules.action_model.GR00T_ActionHeader import get_action_mod
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 from starVLA.model.tools import FRAMEWORK_REGISTRY
 
-@FRAMEWORK_REGISTRY.register("QwenGR00T")
+@FRAMEWORK_REGISTRY.register("Qwen-Dual")
 class Qwen_GR00T(baseframework):
     """
     Multimodal vision-language-action model.
@@ -61,6 +62,13 @@ class Qwen_GR00T(baseframework):
         self.config = config
         self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
         self.action_model: FlowmatchingActionHead = get_action_model(config=self.config)  # 修复后续引用
+
+        self.dino_encoder = get_dino_model(
+            backone_name=getattr(self.config.framework.dino, "dino_backbone", "dinov2_vits14")
+        )
+        self.dino_pro = nn.Linear(
+            in_features=self.dino_encoder.num_channels, out_features=self.qwen_vl_interface.model.config.hidden_size
+        )
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
         self.past_action_window_size = config.framework.action_model.past_action_window_size
@@ -109,7 +117,18 @@ class Qwen_GR00T(baseframework):
             )
             # last_hidden_state: [B, seq_len, H]
             last_hidden = qwenvl_outputs.hidden_states[-1]   # [B, L, H]
+            
+            # Step 2: DINO Forward
+            image_tensors = self.dino_encoder.prepare_dino_input(batch_images)  #
+            B = len(batch_images)
+            dino_features = self.dino_encoder(image_tensors)  # DINO output is [B*num_view, token, dim]
+            dino_encoded_features = dino_features.reshape(B, -1, dino_features.shape[-1])  # [B, num_view * token, dim]
+            dino_encoded_features = self.dino_pro(dino_encoded_features)  # [B, num_view * token, hidden_size]
 
+            # Step 3: Feature Concatenation
+            last_hidden = torch.cat(
+                    [last_hidden, dino_encoded_features], dim=1
+                )
         # Step 4: Action Expert Forward and Loss
         with torch.autocast("cuda", dtype=torch.float32):
             # 标签对齐：取最后 chunk_len 段
@@ -180,7 +199,18 @@ class Qwen_GR00T(baseframework):
             )
             # last_hidden_state: [B, seq_len, H]
             last_hidden = qwenvl_outputs.hidden_states[-1]   # [B, L, H]
+            
+            # Step 2: DINO Forward
+            image_tensors = self.dino_encoder.prepare_dino_input(batch_images)  #
+            B = len(batch_images)
+            dino_features = self.dino_encoder(image_tensors)  # DINO output is [B*num_view, token, dim]
+            dino_encoded_features = dino_features.reshape(B, -1, dino_features.shape[-1])  # [B, num_view * token, dim]
+            dino_encoded_features = self.dino_pro(dino_encoded_features)  # [B, num_view * token, hidden_size]
 
+            # Step 3: Feature Concatenation
+            last_hidden = torch.cat(
+                    [last_hidden, dino_encoded_features], dim=1
+                )
         state = torch.from_numpy(np.array(state)).to(last_hidden.device, dtype=last_hidden.dtype) if state is not None else None
         # Step 4: Action Expert Forward and Loss
         with torch.autocast("cuda", dtype=torch.float32):

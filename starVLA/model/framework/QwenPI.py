@@ -60,9 +60,11 @@ class Qwen_PI(baseframework):
         self.config = config
         self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
 
-        # get llm config
+        # dynamic get llm config
         llm_layers, llm_hidden_size = 37, 2048
-
+        DiTConfig = {"num_layers": llm_layers, "input_embedding_dim": llm_hidden_size, "attention_head_dim": 64, "num_attention_heads": 32}
+        self.config.framework.action_model.hidden_size = llm_hidden_size
+        self.config.framework.action_model.DiTConfig = DiTConfig
         self.action_model: LayerwiseFlowmatchingActionHead = get_action_model(config=self.config)  # 修复后续引用
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
@@ -127,7 +129,7 @@ class Qwen_PI(baseframework):
             repeated_diffusion_steps = (
                 self.config.trainer.get("repeated_diffusion_steps", 4) if self.config and self.config.trainer else 4
             )
-            repeated_diffusion_steps = 1 # NO repeat for big action FM
+            repeated_diffusion_steps = 2 # NO repeat for big action FM
             actions_target_repeated = actions_target.repeat(repeated_diffusion_steps, 1, 1)
             # 对每层特征做 repeat
             vl_embs_list_repeated = [h.repeat(repeated_diffusion_steps, 1, 1) for h in vl_embs_list]

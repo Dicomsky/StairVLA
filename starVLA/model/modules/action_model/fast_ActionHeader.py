@@ -53,7 +53,7 @@ class Fast_Action_Tokenizer(nn.Module):
         """
         return ''.join([f"<robot_action_{token}>" for token in tokens]) # you should add <robot_action_{token}> to VLM as special tokens, 
         # and set the 
-        #see /mnt/petrelfs/yejinhui/Projects/llavavla/starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+        #see ./starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 
     def fit_tokenizer_on_datasets(self, action_dataset, datasets_path="<your_local_path>", ):
         # 如果 datasets_path 存在， 直接读取
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     start_debugpy_once()
 
-    fast_tokenizer_name = "/mnt/petrelfs/yejinhui/Projects/llavavla/playground/Pretrained_models/fast"
+    fast_tokenizer_name = "./playground/Pretrained_models/fast"
     fast_tokenizer = Fast_Action_Tokenizer(fast_tokenizer_name=fast_tokenizer_name)
     raw_actions = [np.random.randn(16, 7), np.random.randn(16, 7)]
 

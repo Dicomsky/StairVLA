@@ -30,11 +30,11 @@ mkdir -p ${output_dir}
 cp $0 ${output_dir}/
 
 accelerate launch \
-  --config_file InternVLA/config/deepseeds/deepspeed_zero2.yaml  \
+  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml  \
   --num_processes 8 \
-  InternVLA/training/train_internvla.py \
-  --config_yaml ./InternVLA/config/training/internvla_cotrain_oxe.yaml \
-  --framework.framework_py ${Framework_name} \
+  starVLA/training/train_internvla.py \
+  --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
+  --framework.name ${Framework_name} \
   --framework.qwenvl.base_vlm ${base_vlm} \
   --datasets.vla_data.data_root_dir ${oxe_data_root} \
   --datasets.vla_data.data_mix ${data_mix} \

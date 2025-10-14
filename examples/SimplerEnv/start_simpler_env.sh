@@ -2,11 +2,11 @@
 
 echo `which python`
 
-export SimplerEnv_PATH=/mnt/petrelfs/share/yejinhui/Projects/SimplerEnv
-export PYTHONPATH=/mnt/petrelfs/share/yejinhui/Envs/miniconda3/envs/dinoact:${PYTHONPATH}
+export SimplerEnv_PATH=~/Projects/SimplerEnv
+export PYTHONPATH=~/Envs/miniconda3/envs/dinoact:${PYTHONPATH}
 export PYTHONPATH=$(pwd):${PYTHONPATH}
 
-MODEL_PATH=/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1003_qwenoft/checkpoints/steps_100000_pytorch_model.pt
+MODEL_PATH=./results/Checkpoints/1003_qwenoft/checkpoints/steps_100000_pytorch_model.pt
 # MODEL_PATH=$1
 ckpt_path=${MODEL_PATH}
 TSET_NUM=1
