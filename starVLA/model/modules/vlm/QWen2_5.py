@@ -292,183 +292,22 @@ class _QWen_VL_Interface(nn.Module):
 
 
 
-def get_qwen2_5_interface(config=None, **kwargs):
-    """
-    Factory function returning the wrapped Qwen2.5-VL interface.
-
-    Parameters:
-        config (dict | Any | None):
-            Passed to _QWen_VL_Interface. Expected (optional) structure:
-                config.framework.get("qwenvl", {}) -> {
-                    "base_vlm": "<model_id or local path>"
-                }
-                config.datasets.vla_data.get("CoT_prompt") optionally used in build_qwenvl_inputs.
-        **kwargs:
-            Currently unused; placeholder for future (e.g., override device_map, precision modes).
-
-    Returns:
-        _QWen_VL_Interface:
-            Instance exposing:
-                .forward(...)
-                .generate(...)
-                .build_qwenvl_inputs(...)
-                .model (raw HF model)
-                .processor (tokenizer + image/video processor)
-
-    Notes:
-        - Does not wrap with additional adapters; extension point for future multi-head / routing logic.
-        - Device placement handled by underlying from_pretrained (device_map='cuda').
-
-    """
-    model = _QWen_VL_Interface(config=config)
-
-    return model
-
-
-
-def messages_to_sources(batch_messages):
-    """
-    将 batch 格式的 messages 转换为 sources 格式，支持多模态（image/text）。
-    
-    Args:
-        batch_messages: List[List[Dict]]，每个样本是一组 message 对话
-
-    Returns:
-        List[List[Dict]]，每个样本的 source 对话
-    """
-    batch_sources = []
-
-    for messages in batch_messages:
-        source = []
-        for msg in messages:
-            role = msg["role"]
-            segments = msg["content"]
-
-            parts = []
-            for seg in segments:
-                if seg["type"] == "text":
-                    parts.append(seg["text"])
-                elif seg["type"] == "image":
-                    parts.append(DEFAULT_IMAGE_TOKEN) # VIDEO 还不支持
-                else:
-                    raise ValueError(f"Unsupported content type: {seg['type']}")
-
-            content = "\n".join(parts)
-            source.append({"from": "human" if role == "user" else "gpt", "value": content})
-
-        batch_sources.append(source)
-
-    return batch_sources
-
-def preprocess_qwen_2_visual(
-    messages,
-    tokenizer: transformers.PreTrainedTokenizer,
-    grid_thw: List = [],
-    visual_type: str = "image",
-) -> Dict:
-    # message --> sources json
-    pass
-    
-
-    sources = messages_to_sources(messages)  # 转换为 source 格式
-    # torch.distributed.barrier()
-    # 复用 QWenvl 代码
-    roles = {"human": "user", "gpt": "assistant"}
-    system_message = "You are a helpful assistant."
-    if visual_type not in ["image", "video"]:
-        raise ValueError("visual_type must be either 'image' or 'video'")
-    
-    # tokenizer = copy.deepcopy(tokenizer)
-    chat_template = "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
-    tokenizer.chat_template = chat_template
-
-    visual_replicate_index = 0
-    input_ids, targets = [], []
-    action_obs_mask = [] # 记录那些token 是obs 可以看到的 --> 传递给 Q-Former # TODO 看一下是否有更好的实现方式
-    for i, source in enumerate(sources):
-        try:
-            if roles[source[0]["from"]] != roles["human"]:
-                source = source[1:]
-        except:
-            print(sources)
-
-        input_id, target = [], []
-
-        input_id += tokenizer.apply_chat_template(
-            [{"role": "system", "content": system_message}]
-        )
-        target += [IGNORE_INDEX] * len(input_id)
-
-        for conv in source:
-            try:
-                role = conv["role"]
-                content = conv["content"]
-            except:
-                role = conv["from"]
-                content = conv["value"]
-
-            role = roles.get(role, role)
-            if role == "user":
-                visual_tag = f"<{visual_type}>"
-                if visual_tag in content:
-                    parts = content.split(visual_tag)
-                    new_parts = []
-                    for i in range(len(parts) - 1):
-                        new_parts.append(parts[i])
-                        replacement = (
-                            "<|vision_start|>"
-                            + f"<|{visual_type}_pad|>"
-                            * grid_thw[visual_replicate_index]
-                            + "<|vision_end|>"
-                        )
-                        new_parts.append(replacement)
-                        visual_replicate_index += 1
-                    new_parts.append(parts[-1])
-                    content = "".join(new_parts)
-
-            conv = [{"role": role, "content": content}]
-            encode_id = tokenizer.apply_chat_template(conv)
-            input_id += encode_id
-            if role in ["user", "system"]:
-                target += [IGNORE_INDEX] * len(encode_id)
-            else:
-                target_mask = encode_id.copy()
-                target_mask[:3] = [IGNORE_INDEX] * 3
-                target += target_mask
-
-        assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
-        input_ids.append(input_id)
-        targets.append(target) # TODO 看一下是如何处理结束符号的 @JinhuiYE
-
-
-    # TODO Batch padding 
-    # TODO 不建议在这里执行padding
-    
-    # Padding input_ids 和 targets
-    input_ids = pad_sequence(
-        [torch.tensor(ids, dtype=torch.long) for ids in input_ids],
-        batch_first=True,
-        padding_value=tokenizer.pad_token_id,
-        padding_side=tokenizer.padding_side
-    )
-    targets = pad_sequence(
-        [torch.tensor(tgt, dtype=torch.long) for tgt in targets],
-        batch_first=True,
-        padding_value=IGNORE_INDEX,
-        padding_side=tokenizer.padding_side
-    )
-
-    # 构建 attention_mask：非 pad 的位置为 1，pad 的为 0
-    attention_mask = (input_ids != tokenizer.pad_token_id).long()
-    
-    return dict(
-        input_ids=input_ids,
-        labels=targets,
-        attention_mask=attention_mask,
-    )
-
-
 if __name__ == "__main__":
+    from omegaconf import OmegaConf
+    import debugpy
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_yaml", type=str, default="./starVLA/config/training/internvla_cotrain_custom.yaml", help="Path to YAML config")
+    args, clipargs = parser.parse_known_args()
+
+    debugpy.listen(("0.0.0.0", 10092))
+    print("🔍 Rank 0 waiting for debugger attach on port 10092...")
+    debugpy.wait_for_client()
+
+    cfg = OmegaConf.load(args.config_yaml)
+    
     model_id = "./playground/Pretrained_models/Qwen2.5-VL-3B-Instruct"
-    qwen_vl = get_qwen2_5_interface(model_id)
+    cfg.framework.qwenvl.base_vlm = model_id
+
+    model = _QWen_VL_Interface(config=cfg)
     pass

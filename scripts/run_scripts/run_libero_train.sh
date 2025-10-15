@@ -27,7 +27,7 @@ cp $0 ${output_dir}/
 accelerate launch \
   --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
   --num_processes 8 \
-  starVLA/training/train_internvla.py \
+  starVLA/training/train_starvla.py \
   --config_yaml ./starVLA/config/training/internvla_cotrain_libero.yaml \
   --framework.name ${Framework_name} \
   --framework.action_model.action_hidden_dim ${action_input_dim} \

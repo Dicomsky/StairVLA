@@ -31,7 +31,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.projector.QFormer import get_layerwise_qformer
 from starVLA.model.modules.action_model.DiTActionHeader import get_action_model
 from starVLA.model.modules.dino_model.dino import get_dino_model
@@ -66,7 +66,7 @@ class InternVLA_M1(baseframework):
         """
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
         self.layer_qformer = get_layerwise_qformer(config=self.config)
         self.action_model = get_action_model(config=self.config)
         self.dino_encoder = get_dino_model(

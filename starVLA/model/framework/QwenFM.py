@@ -30,24 +30,13 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.action_model.GR00T_ActionHeader import get_action_model, FlowmatchingActionHead
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 from starVLA.model.tools import FRAMEWORK_REGISTRY
 
 @FRAMEWORK_REGISTRY.register("QwenFM")
 class Qwenvl_FMHead(baseframework):
-    """
-    Multimodal vision-language-action model.
-
-    Components:
-      - Qwen2.5 VL interface for fused language/vision token embeddings
-      - Layer-wise QFormer for multi-layer feature aggregation
-      - DINO encoder for dense multi-view spatial tokens
-      - DiT diffusion head for future action sequence modeling
-
-    Focus: Predict future continuous actions conditioned on images + instruction.
-    """
 
     def __init__(
         self,
@@ -63,7 +52,10 @@ class Qwenvl_FMHead(baseframework):
         """
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
+        # align dims --> we should put them to config or no?
+        config.framework.action_model.action_hidden_dim = self.qwen_vl_interface.model.config.hidden_size
+        
         self.action_model: FlowmatchingActionHead = get_action_model(config=self.config)  # 修复后续引用
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
@@ -207,7 +199,11 @@ if __name__ == "__main__":
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
 
+
     cfg = OmegaConf.load(args.config_yaml)
+    
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
+     
     # try get model
     model: Qwenvl_FMHead = Qwenvl_FMHead(cfg)
     print(model)

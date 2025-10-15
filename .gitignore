@@ -201,7 +201,7 @@ debug_images/step1_raw.npy
 test_image.jpg
 test_image.jpg.npy
 test_image.jpg
-scripts/*
+# scripts/*
 
 scripts/run_scripts/sum2cluter.sh
 

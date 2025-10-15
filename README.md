@@ -26,7 +26,10 @@ In StarVLA (also a pun on “start VLA” ),  each functional component (model, 
 <p align="center">
   <img src="assets/starVLA_tabel_v2.png" alt="SimplerEnv modules" width="85%">
 </p>
-* Qwen-FAST and Qwen-OFT were trained on 16×A100 GPUs for 10k steps (~3 hours), while Qwen-FM and Qwen-Dual were trained for 30k steps (~18 hours).
+* Qwen-FAST and Qwen-OFT were trained on 16×A100 GPUs for 10k steps (~3 hours), while Qwen-FM and Qwen-Dual were trained for 30k steps (~18 hours). 
+
+For dynamic updates, see our [🍀 Overleaf](https://www.overleaf.com/read/qqtwrnprctkf#d5bdce), which continuously presents our real-time experimental results.
+
 
 
 
@@ -150,7 +153,7 @@ pip install -e .
 </details>
 
 <details close>
-<summary><b>👀 Sanity check environment
+<summary><b>👀 Quick Check StarVLA
 </b></summary>
 
 ```bash
@@ -163,7 +166,7 @@ It should build successfully and `print(model)`. You can also call `model.forwar
 </details>
 
 <details close>
-<summary><b>🧪 Eval SimplerEnv
+<summary><b>🧪 Eval Existing Model
 </b></summary>
 
 The evaluation pipeline is adapted from [InternVLA-M1](https://github.com/InternRobotics/InternVLA-M1/examples/SimplerEnv)
@@ -181,7 +184,7 @@ Before running, edit these variables directly at the top of `star_bridge.sh`.
 
 
 <details close>
-<summary><b>🚀 Training on OXE
+<summary><b>🚀 Train Your Own Model
 </b></summary>
 
 
@@ -265,7 +268,8 @@ A: Yes. StarVLA uses a regex / name list to control freezing. Example:
 ```
 --trainer.freeze_modules "qwen_vl_interface.model.model.visual,dino_encoder" \
 ```
-(Comma‑separated; implementation in `TrainerUtils.freeze_backbones`.)
+Tips: You can ``print(your_model)`` first to check the relative paths of your modules and list them as comma-separated values.
+(implementation in `TrainerUtils.freeze_backbones`.)
 
 </details>
 
@@ -290,7 +294,7 @@ A: Yes, somehow can. Specify the latest checkpoint path in `config.yaml`, e.g.:
 ```yaml
 trainer:
   pretrained_checkpoint: path_to_steps_10000.pt
-  reload_modules: "action_model,layer_qformer"
+  reload_modules: "action_model"
 ```
 Empty `reload_modules` means full load all model. However, starVLA does not save  `optimizer state`. It requires a lot of  memory/disk and bring limited benefit.
 </details>

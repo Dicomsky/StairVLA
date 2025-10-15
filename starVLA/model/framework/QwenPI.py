@@ -25,7 +25,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import get_action_model, LayerwiseFlowmatchingActionHead
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 from starVLA.model.tools import FRAMEWORK_REGISTRY
@@ -58,12 +58,15 @@ class Qwen_PI(baseframework):
 
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
 
         # dynamic get llm config
-        llm_layers, llm_hidden_size = 37, 2048
-        DiTConfig = {"num_layers": llm_layers, "input_embedding_dim": llm_hidden_size, "attention_head_dim": 64, "num_attention_heads": 32}
-        self.config.framework.action_model.hidden_size = llm_hidden_size
+        llm_layers, llm_hidden_size = 36, self.qwen_vl_interface.model.config.hidden_size
+
+        DiTConfig = {"num_layers": llm_layers, "input_embedding_dim": 2048, "attention_head_dim": 64, "num_attention_heads": 32}
+        self.config.framework.action_model.hidden_size = 1024 #check what this for?
+        self.config.framework.action_model.diffusion_model_cfg.cross_attention_dim = llm_hidden_size
+
         self.config.framework.action_model.DiTConfig = DiTConfig
         self.action_model: LayerwiseFlowmatchingActionHead = get_action_model(config=self.config)  # 修复后续引用
 
@@ -217,6 +220,9 @@ if __name__ == "__main__":
 
     cfg = OmegaConf.load(args.config_yaml)
     # try get model
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
+    
+
     model = Qwen_PI(cfg)
     print(model)
 

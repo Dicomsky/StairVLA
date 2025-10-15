@@ -220,14 +220,12 @@ class FlowmatchingActionHead(nn.Module):
     ):
         super().__init__()
         config = full_config.framework.action_model
-        self.hidden_size = config.hidden_size
-        
+        self.hidden_size = config.hidden_size # 是不要和 Q对齐？
+        self.full_config = full_config
         action_model_type = config.action_model_type
         action_model_cfg = DiTConfig[action_model_type]
         
         self.input_embedding_dim = action_model_cfg["input_embedding_dim"]
-
-
         diffusion_model_cfg = config.diffusion_model_cfg
         diffusion_model_cfg = {**action_model_cfg, **diffusion_model_cfg}
         self.model = DiT(**diffusion_model_cfg)
@@ -393,7 +391,6 @@ def get_action_model(config=None):
     return FlowmatchingActionHead(
         full_config=config
     )
-
 
 
 if __name__ == "__main__":

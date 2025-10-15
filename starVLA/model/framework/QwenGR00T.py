@@ -26,7 +26,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.action_model.GR00T_ActionHeader import get_action_model, FlowmatchingActionHead
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 from starVLA.model.tools import FRAMEWORK_REGISTRY
@@ -59,7 +59,10 @@ class Qwen_GR00T(baseframework):
         """
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
+        # align dims --> we should put them to config or no?
+        self.config.framework.action_model.diffusion_model_cfg.cross_attention_dim = self.qwen_vl_interface.model.config.hidden_size
+
         self.action_model: FlowmatchingActionHead = get_action_model(config=self.config)  # 修复后续引用
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
@@ -73,23 +76,7 @@ class Qwen_GR00T(baseframework):
         **kwargs,
     ) -> Tuple:
         """
-        训练前向：直接回归未来动作（无扩散）。
 
-        Flow:
-          1. Build QwenVL inputs (images + instruction tokens)
-          2. Extract hidden states from configured layer range
-          7. Predict action and compute L1 loss
-
-        Args:
-            examples: List[dict], each dict requires:
-                - image: List[PIL.Image] (multi-view)
-                - lang: str instruction
-                - action: np.ndarray or list shaped [T, action_dim]
-            **kwargs: Reserved.
-
-        Returns:
-            dict:
-                action_loss (torch.Tensor): Scalar diffusion noise prediction loss.
         """
         batch_images = [example["image"] for example in examples]  #  [B，[PLT]]
         instructions = [example["lang"] for example in examples]  # [B, str]
@@ -205,8 +192,11 @@ if __name__ == "__main__":
 
     cfg = OmegaConf.load(args.config_yaml)
     # try get model
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
+     
     model: Qwen_GR00T = Qwen_GR00T(cfg)
     print(model)
+
 
 
     # fake sample 
@@ -215,7 +205,7 @@ if __name__ == "__main__":
     sample = {
         "action": np.random.uniform(-1, 1, size=(16, 7)).astype(np.float16), # action_chunk, action_dim
         "image": [image, image], # two views
-        "lang": "This is a fake instruction for testing.",
+        "lang": "This is a fake for testing.",
         "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
     }
 

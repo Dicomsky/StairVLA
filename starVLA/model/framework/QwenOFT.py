@@ -37,7 +37,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
@@ -69,8 +69,10 @@ class Qwenvl_OFT(baseframework):
         """
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
-        self.action_model = get_action_model(config=self.config)  # 修复后续引用
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
+        # align dims --> we should put them to config or no?
+        config.framework.action_model.action_hidden_dim = self.qwen_vl_interface.model.config.hidden_size
+        self.action_model = get_action_model(config=self.config)
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
         self.past_action_window_size = config.framework.action_model.past_action_window_size
@@ -271,8 +273,11 @@ if __name__ == "__main__":
     debugpy.wait_for_client()
 
     cfg = OmegaConf.load(args.config_yaml)
-    
     cfg.framework.action_model.action_hidden_dim = 2048
+
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
+    
+
     # try get model
     model = Qwenvl_OFT(cfg)
     print(model)
@@ -287,7 +292,14 @@ if __name__ == "__main__":
         # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
     }
 
-    batch  = [sample, sample]  # batch size 2
+    sample2 = {
+        "action": np.random.uniform(-1, 1, size=(16, 7)).astype(np.float16), # action_chunk, action_dim
+        "image": [image, image], # two views
+        "lang": "For testing.",
+        # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
+    }
+
+    batch  = [sample, sample2]  # batch size 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     forward_output = model(batch)

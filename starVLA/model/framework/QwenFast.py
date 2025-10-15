@@ -38,7 +38,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.modules.vlm.QWen2_5 import get_qwen2_5_interface
+from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.modules.action_model.fast_ActionHeader import get_action_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
@@ -70,7 +70,7 @@ class Qwenvl_Fast(baseframework):
         """
         super().__init__()
         self.config = config
-        self.qwen_vl_interface = get_qwen2_5_interface(config=self.config)
+        self.qwen_vl_interface = get_vlm_model(config=self.config)
         self.action_model = get_action_model(config=self.config)
 
         self.future_action_window_size = config.framework.action_model.future_action_window_size
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     debugpy.wait_for_client()
 
     cfg = OmegaConf.load(args.config_yaml)
-    cfg.framework.qwenvl.base_vlm = "playground/Pretrained_models/qwen2.5-VL-3B-Action"
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen2.5-VL-3B-Instruct-Action"
 
     cfg.framework.action_model.action_hidden_dim 
     # try get model

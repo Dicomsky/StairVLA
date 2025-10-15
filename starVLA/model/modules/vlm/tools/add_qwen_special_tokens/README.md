@@ -5,11 +5,15 @@
 ## 运行
 
 ```bash
-python add_qwen_special_tokens.py \
-  --model-id Qwen/Qwen2.5-VL-3B-Instruct \
-  --tokens-file tokens.txt \
-  --save-dir ./qwen_vl_with_extra \
+
+fast_token_list=starVLA/model/modules/vlm/tools/add_qwen_special_tokens/fast_tokens.txt
+
+python starVLA/model/modules/vlm/tools/add_qwen_special_tokens/add_special_tokens_to_qwen.py \
+  --model-id playground/Pretrained_models/Qwen2.5-VL-3B-Instruct \
+  --tokens-file ${fast_token_list} \
+  --save-dir playground/Pretrained_models/Qwen2.5-VL-3B-Instruct-Action \
   --init-strategy normal
+  
 ```
 
 `tokens.txt` 示例：
