@@ -1,10 +1,10 @@
 # StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing
-StarVLA is a modular and flexible codebase for developing *Vision-Language Model (VLM) to Vision-Language-Action (VLA) models*.
-In StarVLA (also a pun on “start VLA”),  each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion and low coupling principle, which enabling plug-and-play design, rapid prototyping, and independent debugging.
-The goal is to make VLA development as simple as building with Lego bricks—without modifying the global system, and to quickly integrate with a variety of benchmarks for validation.
+StarVLA is a modular and flexible codebase for developing Vision-Language Model (VLM) to Vision-Language-Action (VLA) models.
+In StarVLA (also a pun on “start VLA” ),  each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion and low coupling principle, which enabling plug-and-play design, rapid prototyping, and independent debugging.
 
 
-![](assets/starVLA_v1.png)
+
+![](assets/Framworks.png)
 *Modules with solid borders are supported; borderless ones are coming soon.
 
 
@@ -18,15 +18,31 @@ The goal is to make VLA development as simple as building with Lego bricks—wit
 
 - [x] **Qwen-FAST**: Utilizes Qwen2.5-VL-3B with a fast tokenizer to autoregressively generate discrete action tokens conditioned on visual and linguistic inputs (in line with RT-2/OpenVLA/π₀-fast).
 - [x] **Qwen-OFT**: Combines Qwen2.5-VL-3B with an MLP action head to perform parallel decoding of continuous actions, regressed from the hidden states of predefined special action tokens (in line with OpenVLA-OFT/EO).
-- [ ] **Qwen-FM**: Integrates the Flow-Matching (FM) action expert with Qwen2.5-VL-3B, adopting a diffusion-based approach for continuous action prediction (in line with π₀/GR-3).
-- [ ] **Qwen-Dual**: Implements a dual-system VLA architecture, where Qwen2.5-VL-3B serves as System2 for high-level vision-language reasoning, while the Flow-Matching module acts as System1 for rapid action prediction (in line with GR00T/InternVLA-M1).
+- [x] **Qwen-FM**: Integrates the Flow-Matching (FM) action expert with Qwen2.5-VL-3B, adopting a diffusion-based approach for continuous action prediction (in line with π₀/GR-3).
+- [x] **Qwen-Dual**: Implements a dual-system VLA architecture, where Qwen2.5-VL-3B serves as System2 for high-level vision-language reasoning, while the Flow-Matching module acts as System1 for rapid action prediction (in line with GR00T/InternVLA-M1).
 
 
 
 <p align="center">
-  <img src="assets/simplerEnv.png" alt="SimplerEnv modules" width="85%">
+  <img src="assets/starVLA_tabel_v2.png" alt="SimplerEnv modules" width="85%">
 </p>
-* Qwen-FAST and Qwen-OFT were trained on 16×A100 GPUs for 10k steps (~3 hours), while Qwen-FM and Qwen-Dual were trained for 20k steps (~8 hours).
+* Qwen-FAST and Qwen-OFT were trained on 16×A100 GPUs for 10k steps (~3 hours), while Qwen-FM and Qwen-Dual were trained for 30k steps (~18 hours).
+
+
+
+### 📈 Model Zoo
+We release a series of pretrained models and checkpoints to facilitate reproduction and downstream use.
+
+#### ✅ Available Checkpoints
+
+| Model | Description | Link |
+|-------|-------------|------|
+| **Qwen2.5-VL-3B-Action** | QwenVL with action tokens | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
+| **QWen-FAST-Bridge-RT-1** | QwenVL + fast-tokenizer | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FAST-Bridge-RT-1) |
+| **QWen-OFT-Bridge-RT-1** | QwenVL + OFT action regression | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-OFT-Bridge-RT-1) |
+| **QWen-PI-Bridge-RT-1** | QwenVL + flow-matching expert  | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FM-Bridge-RT-1) |
+| **QWen-GR00T-Bridge-RT-1** | QwenVL + GR00T N1.5 action header  | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
+
 
 
 ---
@@ -101,8 +117,7 @@ Parameters are passed primarily via extensible dicts, allowing overrides and con
 </details>
 
 
-🧪 *To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our usability target: an internal developer can stand up a new VLA framework in under half a day, and an external user can build their first custom VLA framework within a single day. More design insights for each item can be found in [assets/intro_v1.md](assets/intro_v1.md).*
-
+🧪 *To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our have done a beta test: an internal developer can stand up a new VLA framework in under half a day (leat then 3 hours), and an new user can build their first custom VLA framework within a single day. More design insights for each item can be found in [assets/intro_v1.md](assets/intro_v1.md).*
 
 
 ---
@@ -117,11 +132,11 @@ Parameters are passed primarily via extensible dicts, allowing overrides and con
 
 ```bash
 # Clone the repo
-git clone https://github.com/InternRobotics/InternVLA-M1
+git clone https://github.com/starVLA/starVLA
 
 # Create conda environment
-conda create -n internvla-m1 python=3.10 -y
-conda activate internvla-m1
+conda create -n starVLA python=3.10 -y
+conda activate starVLA
 
 # Install requirements
 pip install -r requirements.txt
@@ -129,7 +144,7 @@ pip install -r requirements.txt
 # Install FlashAttention2
 pip install flash-attn --no-build-isolation
 
-# Install InternVLA-M1
+# Install starVLA
 pip install -e .
 ```
 </details>
@@ -233,6 +248,7 @@ accelerate launch \
   --num_processes 8 \
   starVLA/training/train_internvla.py \
   --config_yaml ./starVLA/config/training/internvla_cotrain_oxe.yaml \
+  --framework.qwenvl.base_vlm Qwen/Qwen2.5-VL-7B-Instruct \ # override framework choice
   --framework.qwenvl.base_vlm Qwen/Qwen2.5-VL-7B-Instruct \ # override framework choice
   --framework.action_model.new_module ${module_name} \ # plug-in a new module to action model
 ```
