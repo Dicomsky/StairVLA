@@ -38,15 +38,16 @@ We release a series of pretrained models and checkpoints to facilitate reproduct
 
 #### ✅ Available Checkpoints
 
-| Model | Description | Link |
-|-------|-------------|------|
-| **Qwen2.5-VL-3B-Action** | QwenVL with action tokens | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
-| **QWen-FAST-Bridge-RT-1** | QwenVL + fast-tokenizer | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FAST-Bridge-RT-1) |
-| **QWen-OFT-Bridge-RT-1** | QwenVL + OFT action regression | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-OFT-Bridge-RT-1) |
-| **QWen-PI-Bridge-RT-1** | QwenVL + flow-matching expert  | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FM-Bridge-RT-1) |
-| **QWen-GR00T-Bridge-RT-1** | QwenVL + GR00T N1.5 action header  | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
-
-
+| Model | Description | WindowX | Link |
+|-------|-------------|------|------|
+| **Qwen2.5-VL-3B-Action** | Qwen2.5-VL with action tokens | - | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
+| **QWen-FAST-Bridge-RT-1** | QwenVL + fast-tokenizer | 58.6 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FAST-Bridge-RT-1) |
+| **QWen-OFT-Bridge-RT-1** | QwenVL + OFT action regression | 41.8 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-OFT-Bridge-RT-1) |
+| **QWen-PI-Bridge-RT-1** | QwenVL + flow-matching expert  | 62.5 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FM-Bridge-RT-1) |
+| **QWen-GR00T-Bridge-RT-1** | QwenVL + GR00T N1.5 action header | 63.6 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge-RT-1) |
+| **QWen-GR00T-Bridge** | QwenVL + GR00T N1.5 action header | 71.4 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge) |
+| **QWen3VL-OFT-Bridge-RT-1** | Qwen3VL + OFT action regression | 42.7 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen3VL-OFT-Bridge-RT-1) |
+| **QWen3VL-GR00T-Bridge-RT-1** | Qwen3VL + GR00T N1.5 action header | 65.3 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen3VL-GR00T-Bridge-RT-1) |
 
 ---
 </details>
