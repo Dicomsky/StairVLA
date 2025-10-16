@@ -13,8 +13,11 @@ Key Points:
   - Injects an action special token into the VLM
   - Continuous action prediction via L1 regression over the action special token hidden states
 
+
 Note: How to add special tokens to Qwen2.5:
-  See /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+  download our model checkpoint with special tokens added: https://huggingface.co/StarVLA/Qwen2.5-VL-3B-Instruct-Action
+  or /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md （adpat a little code)
+  
 """
 from typing import List
 from tqdm import tqdm

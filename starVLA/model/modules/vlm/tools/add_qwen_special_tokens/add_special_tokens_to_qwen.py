@@ -1,3 +1,8 @@
+# Copyright 2025 starVLA community. All rights reserved.
+# Licensed under the MIT License, Version 1.0 (the "License"); 
+# Implemented by [Jinhui YE / HKUST University] in [2025].
+
+
 import argparse
 import json
 import os
@@ -6,6 +11,7 @@ from typing import List, Dict, Tuple
 import torch
 import torch.nn as nn
 from transformers import AutoTokenizer, Qwen2_5_VLForConditionalGeneration, AutoProcessor
+from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
 def add_new_tokens(
     model,
@@ -28,29 +34,29 @@ def add_new_tokens(
       - 模型的旧 embedding 大小以 model.get_input_embeddings().weight.shape[0] 为准
     """
     # 1) 计算需要新增的 tokens（相对 tokenizer 现有 vocab）
-    vocab = tokenizer.get_vocab()  # 含已添加 tokens
-    to_add = [t for t in new_tokens if t not in vocab]
+    vocab = tokenizer.get_vocab()  # 含原有的特殊 tokens
+    to_add_tokens = [t for t in new_tokens if t not in vocab]
 
     # 2) 记录模型当前的 embedding 尺寸（基础大小）
     old_embed = model.get_input_embeddings()
-    old_embed_size = old_embed.weight.shape[0]
+    old_embed_size = old_embed.weight.shape[0] # 是包括QWen 自留的 token 的
 
     # 3) 如有需要，先把 tokens 加到 tokenizer
     added_now = 0
-    if to_add:
+    if to_add_tokens:
         if as_special:
-            added_now = tokenizer.add_special_tokens({"additional_special_tokens": to_add})
+            added_now = tokenizer.add_special_tokens({"additional_special_tokens": to_add_tokens})
         else:
-            added_now = tokenizer.add_tokens(to_add)
+            added_now = tokenizer.add_tokens(to_add_tokens)
 
     # 4) 目标总大小（tokenizer 总大小，基础 + 所有已添加）
-    target_size = len(tokenizer)
-
+    # target_size = len(tokenizer) # 总词表 --> 是否要保留之前预留的 空token？
+    target_size = old_embed_size + added_now
     # 5) 若 tokenizer 总大小大于模型 embedding 大小，则需要 resize 并初始化新增行
-    action_token_start_idx = old_embed_size
+    action_token_start_idx = old_embed_size # 这里是不保留方案
     action_token_end_idx = old_embed_size - 1  # 默认“无新增”
     if target_size > old_embed_size:
-        model.resize_token_embeddings(target_size) # 一定会加到最后么？
+        model.resize_token_embeddings(target_size) # 这里不该resize target, 会和 tokenizer 不匹配
         new_embed = model.get_input_embeddings()
         with torch.no_grad():
             if init_strategy == "avg":
@@ -76,7 +82,7 @@ def save_bundle(model, tokenizer, mapping: Dict[str, int], save_dir: str, proces
     os.makedirs(save_dir, exist_ok=True)
     model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)
-    with open(os.path.join(save_dir, "added_token_id_map.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(save_dir, "added_custom_token_id_map.json"), "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=2)
     print(f"[OK] 已保存到: {save_dir}")
 
@@ -146,12 +152,22 @@ def main():
     print(f"[INFO] 加载模型: {args.model_id}")
     tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
     tokenizer.padding_side = args.padding_side
-    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    # model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    #     args.model_id,
+    #     torch_dtype="auto",
+    #     device_map="auto" if args.device == "auto" else None,
+    #     trust_remote_code=True,
+    # )
+
+    model = Qwen3VLForConditionalGeneration.from_pretrained(
         args.model_id,
-        torch_dtype="auto",
-        device_map="auto" if args.device == "auto" else None,
-        trust_remote_code=True,
+        attn_implementation="flash_attention_2",
+        dtype=torch.bfloat16,
+        device_map="cuda",
     )
+    processor = AutoProcessor.from_pretrained(args.model_id, trust_remote_code=True)
+    processor.tokenizer.padding_side = "left"
+
 
     # 额外打印三种大小，便于诊断
     base_tok_size = tokenizer.vocab_size                  # 基础词表大小
@@ -170,15 +186,17 @@ def main():
         as_special=args.as_special,
     )
     new_model_embed_size = model.get_input_embeddings().weight.shape[0]
-    print(f"[INFO] 本次新增到 tokenizer 的数量: {added}")
-    # print(f"[INFO] Token 映射: {mapping}")
-    print(f"[INFO] Action token idx 范围: [{action_token_start_idx}, {action_token_end_idx}]")
-    print(f"[DEBUG] model.embed_size(after)   = {new_model_embed_size}")
 
     save_bundle(model, tokenizer, mapping, args.save_dir, processor_src=args.model_id, padding_side=args.padding_side)
 
     # 重新验证
     reload_and_check(args.save_dir, tokens)
+
+    print(f"[INFO] 本次新增到 tokenizer 的数量: {added}")
+    # print(f"[INFO] Token 映射: {mapping}")
+    print(f"[INFO] Action token idx 范围: [{action_token_start_idx}, {action_token_end_idx}]")
+    print(f"[DEBUG] model.embed_size(after)   = {new_model_embed_size}")
+
 
 
 def start_debugpy_once():

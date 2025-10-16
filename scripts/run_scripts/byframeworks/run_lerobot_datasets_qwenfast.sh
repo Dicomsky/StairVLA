@@ -12,6 +12,7 @@ export NCCL_TIMEOUT=1000  # timeout set to 1 hour (unit: seconds)
 Framework_name=QwenFast
 base_vlm=./playground/Pretrained_models/nora # must be a local path, due to simpler will run in other where
 base_vlm=./playground/Pretrained_models/Qwen2.5-VL-3B-Instruct-Action
+base_vlm=./playground/Pretrained_models/Qwen3-VL-4B-Instruct-Action
 freeze_module_list='' # just for fast debug, sota is under fully FT, i.g., freeze_module_list=""
 
 # freeze_module_list="qwen_vl_interface.model.model.visual,dino_encoder" # just for fast debug, sota is under fully FT, i.g., freeze_module_list=""

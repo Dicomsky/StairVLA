@@ -14,7 +14,8 @@ Key Points:
   - Autoregressive action tokens derived from discretized / symbolized continuous actions
 
 Note: How to add special tokens to Qwen2.5:
-  /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
+  download our model checkpoint with special tokens added: https://huggingface.co/StarVLA/Qwen2.5-VL-3B-Instruct-Action
+  or /starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md （adpat a little code)
 """
 
 from typing import List
@@ -239,14 +240,14 @@ if __name__ == "__main__":
     debugpy.wait_for_client()
 
     cfg = OmegaConf.load(args.config_yaml)
-    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen2.5-VL-3B-Instruct-Action"
+    cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct-Action"
 
     cfg.framework.action_model.action_hidden_dim 
     # try get model
     model = Qwenvl_Fast(cfg)
     print(model)
 
-       # fake sample 
+    # fake sample 
     image = Image.fromarray(np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8))
     # Create a sample
     sample = {
@@ -256,14 +257,21 @@ if __name__ == "__main__":
         # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
     }
 
-    batch  = [sample, sample]  # batch size 2
+    sample2 = {
+        "action": np.random.uniform(-1, 1, size=(16, 7)).astype(np.float16), # action_chunk, action_dim
+        "image": [image, image], # two views
+        "lang": "The fake instruction for testing.",
+        # "state" : np.random.uniform(-1, 1, size=(1, 7)).astype(np.float16), # chunk, state_dim
+    }
+
+    batch  = [sample, sample2]  # batch size 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     forward_output = model(batch)
     action_loss = forward_output['action_loss']
     print(f"Action Loss: {action_loss.item()}")
 
-    # test predict action
+    # test predict action. for new model, it didn't learn to predict action token, so you would meet empty action
     predict_output = model.predict_action(batch_images=[batch[0]["image"]], instructions=[batch[0]["lang"]])
     normalized_actions = predict_output['normalized_actions']
     print(f"Unnormalized Action: {normalized_actions}")

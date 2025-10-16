@@ -52,8 +52,6 @@ class Fast_Action_Tokenizer(nn.Module):
         Action token 0 is mapped to the string <robot_action_0>  ... and so on 
         """
         return ''.join([f"<robot_action_{token}>" for token in tokens]) # you should add <robot_action_{token}> to VLM as special tokens, 
-        # and set the 
-        #see ./starVLA/model/modules/vlm/tools/add_qwen_special_tokens/README.md
 
     def fit_tokenizer_on_datasets(self, action_dataset, datasets_path="<your_local_path>", ):
         # 如果 datasets_path 存在， 直接读取
