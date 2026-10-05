@@ -27,6 +27,24 @@ DATASET_NAMED_MIXTURES = {
         ("libero_10_no_noops_1.0.0_lerobot", 1.0, "libero_franka"),
                 # ("libero_90_no_noops_lerobot", 1.0, "libero_franka"),
     ],
+    "libero_plus_all": [
+        ("libero_plus_object", 1.0, "libero_franka"),
+        ("libero_plus_goal", 1.0, "libero_franka"),
+        ("libero_plus_spatial", 1.0, "libero_franka"),
+        ("libero_plus_10", 1.0, "libero_franka"),
+    ],
+    "libero_plus_10": [
+        ("libero_plus_10", 1.0, "libero_franka"),
+    ],
+    "libero_plus_goal": [
+        ("libero_plus_goal", 1.0, "libero_franka"),
+    ],
+    "libero_plus_object": [
+        ("libero_plus_object", 1.0, "libero_franka"),
+    ],
+    "libero_plus_spatial": [
+        ("libero_plus_spatial", 1.0, "libero_franka"),
+    ],
     "libero_goal": [
         ("libero_goal_no_noops_1.0.0_lerobot", 1.0, "libero_franka"),
     ],
@@ -36,6 +54,15 @@ DATASET_NAMED_MIXTURES = {
     "bridge_rt_1": [
         ("bridge_orig_1.0.0_lerobot", 1.0, "oxe_bridge"),
         ("fractal20220817_data_0.1.0_lerobot", 1.0, "oxe_rt1"),
+    ],
+
+    # AgileX PiperX real-robot datasets (StairVLA). Both share the 8D EE-pose state /
+    # 7D delta-EE action schema, so they use the same piperx_fruitv3_ee data config.
+    "fruit25": [
+        ("FruitV3_EE_8Hz_temporal_clean_v2", 1.0, "piperx_fruitv3_ee"),
+    ],
+    "pushblock": [
+        ("PushBlockBlueSquare_EE_20Hz_temporal_clean_v2", 1.0, "piperx_fruitv3_ee"),
     ],
 
     "demo_sim_pick_place": [

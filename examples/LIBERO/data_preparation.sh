@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export HF_HUB_DISABLE_XET=1
+export HF_HUB_DOWNLOAD_TIMEOUT=600
+
 # Usage:
 #   export DEST=/path/to/dir && bash examples/LIBERO/data_preparation.sh
 # or
@@ -25,10 +28,10 @@ for repo in \
   IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot \
   IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot
 do
-  hf download "$repo" --repo-type dataset --local-dir "$DEST/libero/${repo##*/}"
+  hf download "$repo" --repo-type dataset --local-dir "$DEST/libero/${repo##*/}" --max-workers 1
 done
 
-hf download "StarVLA/LLaVA-OneVision-COCO" --repo-type dataset --local-dir "$DEST/LLaVA-OneVision-COCO"
+hf download "StarVLA/LLaVA-OneVision-COCO" --repo-type dataset --local-dir "$DEST/LLaVA-OneVision-COCO" --max-workers 1
 unzip -- "$DEST/LLaVA-OneVision-COCO/sharegpt4v_coco.zip" -d "$DEST/LLaVA-OneVision-COCO/"
 
 mkdir -p "$CUR/playground/Datasets"

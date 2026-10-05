@@ -1,4 +1,5 @@
 import dataclasses
+import gc
 import datetime as dt
 import json
 import logging
@@ -16,7 +17,7 @@ import tyro
 from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-from examples.LIBERO.eval_files.model2libero_interface import ModelClient
+from model2libero_interface import ModelClient
 
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
@@ -38,7 +39,7 @@ class Args:
     # LIBERO environment-specific parameters
     #################################################################################################################
     task_suite_name: str = "libero_goal"  # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
-    num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
+    num_steps_wait: int = 50  # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 50  # Number of rollouts per task
 
     #################################################################################################################
@@ -54,6 +55,10 @@ class Args:
     post_process_action: bool = True
 
     job_name: str = "test"
+    action_chunk_size_override: int | None = None
+    summary_json_path: str | None = None
+    global_success_offset: int = 0
+    global_episode_offset: int = 0
 
 
 def eval_libero(args: Args) -> None:
@@ -90,6 +95,7 @@ def eval_libero(args: Args) -> None:
         host=args.host,
         port=args.port,
         image_size=args.resize_size,
+        action_chunk_size_override=args.action_chunk_size_override,
     )
 
     disturb_res = {}
@@ -102,16 +108,21 @@ def eval_libero(args: Args) -> None:
         item_name = item["name"]
         ID2CATEGORY[item['id']] = (category, item_name)
         if category not in disturb_res:
-            disturb_res[category] = {"total_count": 0, "success_count": 0}
-        disturb_res[category]["total_count"] += 1
+            disturb_res[category] = {"total_count": 0, "success_count": 0, "task_count": 0}
+        disturb_res[category]["task_count"] += 1
 
     # Start evaluation
 
     total_episodes, total_successes = 0, 0
+    task_results = []
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
         
         # Get task
         task = task_suite.get_task(task_id)
+        task_category, task_name = ID2CATEGORY.get(
+            task_id + 1,
+            ID2CATEGORY.get(task_id, ("unknown", task.language.replace(" ", "_"))),
+        )
 
         # Get default LIBERO initial states
         initial_states = task_suite.get_task_init_states(task_id)
@@ -221,13 +232,16 @@ def eval_libero(args: Args) -> None:
                 if done:
                     task_successes += 1
                     total_successes += 1
-                    disturb_res[ID2CATEGORY[task_id+1][0]]['success_count'] += 1
+                    disturb_res.setdefault(task_category, {"total_count": 0, "success_count": 0, "task_count": 0})
+                    disturb_res[task_category]["success_count"] += 1
                     break
                 t += 1
                 step += 1
 
             task_episodes += 1
             total_episodes += 1
+            disturb_res.setdefault(task_category, {"total_count": 0, "success_count": 0, "task_count": 0})
+            disturb_res[task_category]["total_count"] += 1
 
             # Save a replay video of the episode
             suffix = "success" if done else "failure"
@@ -235,7 +249,7 @@ def eval_libero(args: Args) -> None:
 
             imageio.mimwrite(
                 pathlib.Path(args.video_out_path)
-                / f"rollout_{ID2CATEGORY[task_id+1][1]}_episode{episode_idx}_{suffix}.mp4",
+                / f"rollout_{task_name}_episode{episode_idx}_{suffix}.mp4",
                 [np.asarray(x) for x in replay_images],
                 fps=25,
             )
@@ -251,19 +265,66 @@ def eval_libero(args: Args) -> None:
                 f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)"
             )
 
-        # Log final results
-        logging.info(
-            f"Current task success rate: {float(task_successes) / float(task_episodes)}"
-        )
-        logging.info(
-            f"Current total success rate: {float(total_successes) / float(total_episodes)}"
-        )
-    with open(os.path.join(args.log_path,f'{args.task_suite_name}.json'), 'w', encoding='utf-8') as f:
-        json.dump(disturb_res, f)
-    logging.info(
-        f"Total success rate: {float(total_successes) / float(total_episodes)}"
-    )
+        # Log final results for this task.
+        task_rate = float(task_successes) / float(task_episodes) if task_episodes else 0.0
+        suite_rate = float(total_successes) / float(total_episodes) if total_episodes else 0.0
+        global_successes = args.global_success_offset + total_successes
+        global_episodes = args.global_episode_offset + total_episodes
+        global_rate = float(global_successes) / float(global_episodes) if global_episodes else 0.0
+        task_results.append({
+            "task_id": int(task_id),
+            "task_description": task_description,
+            "successes": int(task_successes),
+            "episodes": int(task_episodes),
+            "success_rate": task_rate,
+            "suite_successes_so_far": int(total_successes),
+            "suite_episodes_so_far": int(total_episodes),
+            "suite_success_rate_so_far": suite_rate,
+            "global_successes_so_far": int(global_successes),
+            "global_episodes_so_far": int(global_episodes),
+            "global_success_rate_so_far": global_rate,
+        })
+        logging.info(f"Finished task: {task_description}")
+        logging.info(f"Current task success rate: {task_rate:.4f} ({task_successes}/{task_episodes})")
+        logging.info(f"Current suite success rate: {suite_rate:.4f} ({total_successes}/{total_episodes})")
+        logging.info(f"Current global success rate: {global_rate:.4f} ({global_successes}/{global_episodes})")
+        try:
+            env.close()
+        except Exception as exc:
+            logging.warning(f"Failed to close LIBERO env cleanly: {exc}")
+        del env
+        gc.collect()
+
+    pathlib.Path(args.log_path).mkdir(parents=True, exist_ok=True)
+    with open(os.path.join(args.log_path, f'{args.task_suite_name}.json'), 'w', encoding='utf-8') as f:
+        json.dump(disturb_res, f, indent=2)
+
+    final_rate = float(total_successes) / float(total_episodes) if total_episodes else 0.0
+    logging.info(f"Total success rate: {final_rate}")
     logging.info(f"Total episodes: {total_episodes}")
+
+    if args.summary_json_path:
+        summary = {
+            "task_suite_name": args.task_suite_name,
+            "total_successes": int(total_successes),
+            "total_episodes": int(total_episodes),
+            "success_rate": final_rate,
+            "global_success_offset": int(args.global_success_offset),
+            "global_episode_offset": int(args.global_episode_offset),
+            "global_total_successes": int(args.global_success_offset + total_successes),
+            "global_total_episodes": int(args.global_episode_offset + total_episodes),
+            "global_success_rate": (
+                float(args.global_success_offset + total_successes)
+                / float(args.global_episode_offset + total_episodes)
+                if args.global_episode_offset + total_episodes else 0.0
+            ),
+            "task_results": task_results,
+            "category_results": disturb_res,
+        }
+        summary_path = pathlib.Path(args.summary_json_path)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(summary, indent=2))
+        logging.info(f"Summary JSON saved to: {summary_path}")
 
 
 def _get_libero_env(task, resolution, seed):

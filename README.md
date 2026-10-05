@@ -1,482 +1,251 @@
-# StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing
-Collecting, integrating, and exploring cutting-edge technologies for generalist robots.
+<div align="center">
 
-<!-- [![Update](https://img.shields.io/badge/UPDATE-Scripts%20fixed%20%7C%20Packaging%20smoother-red?style=for-the-badge)](https://github.com/starVLA/starVLA) -->
-[![Model & Data on Hugging Face](https://img.shields.io/badge/HuggingFace-Model%20%26%20Data-orange?style=for-the-badge&logo=huggingface)](https://huggingface.co/StarVLA) [![WeChat](https://img.shields.io/badge/WeChat-加入讨论群-brightgreen?style=for-the-badge&logo=wechat)](https://github.com/starVLA/starVLA/issues/64#issuecomment-3715403845)
+# StairVLA: Stage-Aware Hierarchical Action Generation for Vision-Language-Action Models
 
-**[2026/03/03]** 🔥 We now support [**Qwen3.5** as a backbone for VLA](https://github.com/starVLA/starVLA/pull/172) — the fastest integration in the community ⚡  
-With more model size options: **0.8B, 2B, 4B, and 9B**! Build your VLA flexibly on top of native multimodal models! 
+Shangyuan Yuan<sup>1</sup>, Xinda Qi<sup>1,2</sup>, Yujiang Pu<sup>1</sup>, Wenliang Guo<sup>1</sup>, Xiaobo Tan<sup>1</sup>
 
-**[2026/01/29]** 🔥 StarVLA [Training Efficiency Report](https://github.com/starVLA/starVLA/issues/158) & [Training Curves](https://github.com/starVLA/starVLA/issues/68) released!
-Training configs and efficiency benchmarks for community reference.
+<sup>1</sup>Michigan State University &nbsp;&nbsp; <sup>2</sup>Ant Group
 
-**[2026/01/29]** Calvin benchmark experiments were conducted by the UNT team. For inquiries, please contact Zhijie Song (1600013008@pku.edu.cn) or Feng Yan (bphengyan@163.com).
+[![arXiv](https://img.shields.io/badge/arXiv-TODO-b31b1b.svg)](#) <!-- TODO: arXiv link -->
+[![Checkpoints](https://img.shields.io/badge/🤗%20Checkpoints-coming%20soon-yellow)](#checkpoints-and-datasets)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+</div>
 
-**[2025/12/25]** We've simultaneously established pipelines for [Behavior-1K](examples/Behavior), [RoboTwin 2.0](examples/Robotwin), and CALVIN. We'd love to collaborate and share baseline results for more benchs with the community!
-
-**[2025/12/25]**  We've released RoboCasa evaluation support, which trained **without pretraining and reach SOTA performance**. Check out more details in [examples/Robocasa_tabletop](examples/Robocasa_tabletop).
-
-**[2025/12/15]** Completed a release regression check to ensure the public code runs smoothly. Routine updates—including recent support for the LeRobot dataset v3.0 and DeepSpeed ZeRO-3—will continue to appear in the [🚧 Daily Development Log](https://github.com/starVLA/starVLA/issues/64#issue-3727060165).
-
-**[2025/12/09]** Be the first open-source repository that can train with [train your vlm](starVLA/training/train_starvlm.py), [train your vla](starVLA/training/train_starvla.py), and [train your vla with vlm](starVLA/training/train_starvla_cotrain.py). Check out how to co-train your VLA with multimodal data in [examples/CoTrainVLM](examples/CoTrainVLM/README.md).
-
-<details close>
-<summary><b> Historical Milestones </b></summary>
-
-**[2025/11/12]** We now support [Florence-2](https://github.com/anyantudre/Florence-2-Vision-Language-Model) as a smaller VLM for resource-constrained development. StarVLA can now run on a single A100 GPU. See the [🚀Train with a smaller VLM](#train-smaller-vlm) section for more details. 
-
-
-**[2025/10/30]:** We released the LIBERO Training & Evaluation README. Results are very promising. More detail are in [examples/LIBERO](examples/LIBERO). 
-
-**[2025/10/25]:** We fixed several script links and so everything is smoother now. Thanks to the community for the feedback.
-
-</details>
-
----
-
-StarVLA is a modular and flexible codebase for developing Vision-Language Model (VLM) to Vision-Language-Action (VLA) models.
-In StarVLA (also a pun on “start VLA” ),  each functional component (model, data, trainer, config, evaluation, etc.) follows a top-down, intuitive separation and high cohesion and low coupling principle, which enabling plug-and-play design, rapid prototyping, and independent debugging.
-
-
-
-![](assets/Framworks.png)
-*Modules with solid borders are supported; borderless ones are coming soon.
-
-## Projects Based on StarVLA
-
-**NeuroVLA**: [*A Brain-like Embodied Intelligence for Fluid and Fast Reflexive Robotics Control*](https://github.com/guoweiyu/NeuroVLA)
-
-**PhysBrain**: [*Human Egocentric Data as a Bridge from Vision Language Models to Physical Intelligence*](https://zgc-embodyai.github.io/PhysBrain)
-
-**TwinBrainVLA**: [*TwinBrainVLA: Unleashing the Potential of Generalist VLMs for Embodied Tasks via Asymmetric Mixture-of-Transformers*](https://github.com/ZGC-EmbodyAI/TwinBrainVLA)
-
-**LangForce**: [*LangForce: Bayesian Decomposition of Vision Language Action Models via Latent Action Queries*](https://github.com/ZGC-EmbodyAI/LangForce)
-
-**ABot-M0**: [*ABot-M0: VLA Foundation Model for Robotic Manipulation with Action Manifold Learning*](https://github.com/amap-cvlab/ABot-Manipulation)
-
-## 🔥 Key Features
-
-
-
-<details open>
-<summary><b>Various VLA Frameworks </b></summary>
-
-- [x] **Qwen-FAST**: Utilizes Qwen2.5-VL-3B with a fast tokenizer to autoregressively generate discrete action tokens conditioned on visual and linguistic inputs (in line with π₀-fast).
-- [x] **Qwen-OFT**: Combines Qwen2.5-VL-3B with an MLP action head to perform parallel decoding of continuous actions, regressed from the hidden states of predefined special action tokens (in line with OpenVLA-OFT/EO).
-- [x] **Qwen-PI**: Integrates the Flow-Matching (FM) action expert with Qwen2.5-VL-3B, adopting a diffusion-based approach for continuous action prediction (in line with π₀).
-- [x] **Qwen-GR00T**: Implements a dual-system VLA architecture, where Qwen2.5-VL-3B serves as System2 for high-level vision-language reasoning, while the Flow-Matching module acts as System1 for rapid action prediction (in line with GR00T).
-
-<details open>
-<summary><b> Results on SimplerEnv </b></summary>
+> **Built on [StarVLA](https://github.com/starVLA/starVLA).** Most of this repository (training
+> loop, data loading, VLM interface, baseline frameworks, and the policy server) comes from
+> StarVLA. Our contribution is the stage-aware hierarchical framework and its configurations,
+> listed in [What StairVLA adds](#what-stairvla-adds). See [NOTICE](NOTICE) for file-level provenance.
 
 <p align="center">
-  <img src="assets/starvla_simpleEnv.png" alt="SimplerEnv modules" width="95%">
+  <img src="assets/framework.png" width="95%" alt="StairVLA framework">
 </p>
 
-</details>
+Flow-matching and diffusion action heads usually treat every denoising step the same way. We
+observe that the conditioning focus shifts across denoising stages: early stages combine the
+language instruction and visual observations to form a coarse trajectory, while later stages rely
+more on the current observation to align the actions. StairVLA uses the **partially denoised
+trajectory** as the interface between the two:
 
+- a **high-level VLA** runs the early denoising steps and produces a long-horizon, partially denoised
+  trajectory that is reused across several control cycles;
+- a **lightweight refiner** runs at a higher frequency and finishes the denoising of each local
+  action chunk from the latest observation.
 
-<details open>
-<summary><b> Results on RoboCasa GR1 </b></summary>
+This amortizes the expensive VLA forward pass while keeping frequent closed-loop correction. On
+LIBERO, the GR00T-style instantiation improves average success from 96.5% to 97.8% while reducing
+amortized inference latency from 115.0 ms to 44.2 ms per action chunk.
+
+## Real-robot demos
+
+PushBlock on an AgileX PiperX arm, top camera (5× speed). **Red border: model inference;
+green border: action execution;** the counter shows how many action chunks have been executed.
+
+| Hard initial configuration | Easy initial configuration |
+|:---:|:---:|
+| <img src="assets/pushblock_hard.gif" width="100%"> | <img src="assets/pushblock_easy.gif" width="100%"> |
+| From a similar layout, StairVLA pushes the block into the target; StarVLA-GR00T does not. | Both succeed; StairVLA finishes at about 36 s, StarVLA-GR00T near the 50 s limit. |
+
+Fruit25, StairVLA on three language-conditioned pick-and-place tasks (2× speed):
 
 <p align="center">
-  <img src="assets/stavla_RoboCasa.png" alt="RoboCasa modules" width="94%">
+  <img src="assets/fruit25_demo.gif" width="90%" alt="Fruit25 demos">
 </p>
 
-</details>
+## Results
 
-<details close>
-<summary><b> Results on LIBERO </b></summary>
+### LIBERO
+
+Success rate (%) over 500 trials per suite, one model trained jointly on all four suites. Latency
+is per executable action chunk on one NVIDIA A100 and includes the amortized high-level cost.
+
+| Method | Spatial | Object | Goal | Long | Avg. | Latency (ms) |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| StarVLA-GR00T<sup>†</sup> | 97.8 | 98.8 | 97.4 | 92.0 | 96.5 | 115.0 |
+| **StairVLA (GR00T-base)** | 98.0 | 99.6 | 97.8 | 95.8 | **97.8** | **44.2** |
+| StarVLA-π<sup>†</sup> | 99.2 | 99.0 | 97.2 | 95.8 | 97.8 | 183.3 |
+| **StairVLA (π-base)** | 99.6 | 99.0 | 96.8 | 97.4 | **98.3** | **44.5** |
+
+<sup>†</sup> Success rates as reported by [StarVLA](https://github.com/starVLA/starVLA). Comparisons
+with other hierarchical and coarse-to-fine VLAs are in the paper.
+
+Ablations (GR00T-base):
+
+| Setting | Refiner | Action context | Spatial | Object | Goal | Long | Avg. |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| StarVLA-GR00T | – | – | 97.8 | 98.8 | 97.4 | 92.0 | 96.5 |
+| High-level policy only (H=32) | ✗ | – | 96.8 | 89.4 | 96.8 | 86.4 | 92.4 |
+| StairVLA w/o action context | ✓ | ✗ | 99.2 | 98.6 | 95.6 | 95.4 | 97.2 |
+| **StairVLA** | ✓ | ✓ | 98.0 | 99.6 | 97.8 | 95.8 | **97.8** |
 
 <p align="center">
-  <img src="assets/starvla_LIBERO.png" alt="LIBERO modules" width="84%">
+  <img src="assets/reuse_horizon.png" width="75%" alt="Effect of reuse horizon M">
+  <br><em>Reusing each high-level trajectory for M refinement cycles cuts latency while keeping success high.</em>
 </p>
 
-</details>
+### LIBERO-Plus
 
-<details close>
-<summary><b> Results on Calvin_D_D </b></summary>
+| Setting | Camera | Robot | Language | Light | Background | Noise | Layout | Avg. |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Zero-shot (trained on LIBERO) | 43.7 | 54.5 | 82.5 | 93.4 | 90.5 | 67.8 | 74.0 | 70.4 |
+| Fine-tuned on LIBERO-Plus | 95.5 | 48.4 | 83.7 | 96.8 | 94.9 | 95.4 | 77.4 | 83.7 |
+
+### Real robot (AgileX PiperX)
+
+All methods use Qwen3-VL-2B-Instruct and run on the same NVIDIA RTX A4000. Fruit25 has 24
+single-fruit pick-and-place tasks plus one multi-object sorting task (170 trials per method);
+PushBlock is one continuous pushing task (10 trials per method).
 
 <p align="center">
-  <img src="assets/calvin.png" alt="Calvin_D_D modules" width="84%">
+  <img src="assets/real_world_results.png" width="70%" alt="Real-world results">
 </p>
 
-</details>
+## What StairVLA adds
 
+| File | Role |
+|---|---|
+| [`starVLA/model/framework/HierarchicalVLA.py`](starVLA/model/framework/HierarchicalVLA.py) | High-level policy, partial-denoising trajectory construction, flow-matching velocity target, chunk batching, and hierarchical inference with trajectory reuse. |
+| [`starVLA/model/modules/action_model/Hierarchical_ActionHead.py`](starVLA/model/modules/action_model/Hierarchical_ActionHead.py) | Low-level refiner: cross-attention DiT, SigLIP real-time observation encoder, compressed high-level features, temporal action context, masked refinement loss. |
+| [`examples/`](examples) | Two-stage training configs and evaluation scripts for LIBERO, LIBERO-Plus, and the PiperX real-robot tasks. |
+| [`scripts/benchmark_latency.py`](scripts/benchmark_latency.py) | Per-chunk latency benchmark for the hierarchical inference schedule. |
 
+<p align="center">
+  <img src="assets/refiner_architecture.png" width="90%" alt="Refiner architecture">
+</p>
 
-We have more results for RoboCasa, RoboTwin 2.0, Behavior-1k, Calvin. See our [🍀 Overleaf](https://www.overleaf.com/read/qqtwrnprctkf#d5bdce), which continuously presents our real-time experimental results.
+Where each part of the method lives in the code:
 
+- **Partial denoising** (training inputs for the refiner): `HierarchicalVLA._sample_lower_flow_path_t`,
+  `_build_lower_flow_path_input`, `_make_lower_flow_step_size`.
+- **Velocity target and masked loss**: target construction in `HierarchicalVLA`, loss in
+  `HierarchicalRefinerActionHead.forward`.
+- **Feature compression and temporal context**: `_build_condition_tokens`, `gather_temporal_chunk`,
+  `gather_temporal_context` in `Hierarchical_ActionHead.py`.
+- **Hierarchical inference with reuse**: `HierarchicalVLA.predict_action` → `_predict_chunk_online`;
+  the high-level trajectory is recomputed every `eval_num_chunks` (M) refinement cycles.
 
+Key configuration fields:
 
+| Symbol | Field | LIBERO setting |
+|---|---|---|
+| High-level horizon H | `framework.action_model.action_horizon` | 32 |
+| Refiner chunk size h | `framework.hierarchical_action_head.chunk_action_horizon` | 5 |
+| Temporal context k | `framework.hierarchical_action_head.temporal_context_extra` | 5 |
+| Reuse length M | `hierarchical_action_head.eval_num_chunks`, or `--hier_eval_num_chunks` at serving time | 4 |
+| Training denoising range | `top_plan_step_scale_{min,max}`, `lower_flow_path_mix_{min,max}_scale` | see config |
+| Inference hand-over progress α | `--denoise_step_scale` at serving time | 0.97 |
 
+`observation_indices` in a stage-2 config must equal the chunk start offsets
+(`arange(num_refine_chunks) * chunk_action_horizon`): the refiner picks its observation by chunk index.
 
-### 📈 Model Zoo
-We release a series of modified models and finetuning checkpoints to facilitate reproduction and downstream use.
-
-#### ✅ Available Modified Models
-
-| Model | Description  | Link |
-|-------|-------------|------|
-| **Qwen2.5-VL-3B-Action** | Extend Qwen2.5-VL's vocabulary with Fast Tokens  | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen2.5-VL-3B-Instruct-Action) |
-| **Qwen3-VL-4B-Action** | Extend Qwen3-VL's vocabulary with Fast Tokens | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen3-VL-4B-Instruct-Action) |
-
-#### ✅ Available Finetuning Checkpoints
-| Model | Description | WidowX | Link |
-|-------|-------------|------|------|
-| **QWen2.5-FAST-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot) | 58.6 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FAST-Bridge-RT-1) |
-| **QWen2.5-OFT-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot) | 41.8 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-OFT-Bridge-RT-1) |
-| **QWen2.5-PI-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot)  | 62.5 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-FM-Bridge-RT-1) |
-| **QWen2.5-GR00T-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot) | 63.6 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-PI-Bridge-RT-1) |
-| **QWen-GR00T-Bridge** | Training only on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) | 71.4 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen-GR00T-Bridge) |
-| **QWen3VL-OFT-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot) | 42.7 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen3VL-OFT-Bridge-RT-1) |
-| **QWen3VL-GR00T-Bridge-RT-1** | Training on [Bridge](https://huggingface.co/datasets/IPEC-COMMUNITY/bridge_orig_lerobot) and [Fractal](https://huggingface.co/datasets/IPEC-COMMUNITY/fractal20220817_data_lerobot) | 65.3 | [🤗 Hugging Face](https://huggingface.co/StarVLA/Qwen3VL-GR00T-Bridge-RT-1) |
----
-
-
-| Model | Description | Avg. Length | Link |
-|-------|-------------|------|------|
-| **QWen2.5VL-GR00T-Calvin_D_D** | Training on [Calvin_D_D](https://github.com/EmbodiedAI-RoboTron/RoboTron-Mani/tree/lerobot/examples/calvin) | 3.786 | [🤗 Hugging Face](https://huggingface.co/Simplicissimus-S/StarVLA-QwenGR00T_Qwen2.5-VL-3B-Instruct-Action_calvin_D_D) |
-
----
-</details>
-
-<details open>
-<summary><b>Various Simulation Benchmarks </b></summary>
-
-
-- [x] **SimplerEnV**
-- [x] **LIBERO**
-- [x] **LIBERO-plus**
-- [x] **Robocasa**
-- [x] **RoboTwin**
-- [x] **BEHAVIOR**
-- [ ] **SO101**
-- [x] **Calvin** *See details in [`calvin_D_D`](examples/calvin)
-- [ ] **RLBench**
-
-</details>
-
-
-<details close>
-<summary><b> Various Training Strategies </b></summary>
-
-* [x] Single Imitation Learning
-* [x] Multimodal Multitasks Co-training
-* [ ] Reinforcement Learning Adaption
-
-</details>
-
----
-
-## 🚀 Quick Start
-
-<details close>
-<summary><b>🛠 Environment Setup
-</b></summary>
-
-
+## Installation
 
 ```bash
-# Clone the repo
-git clone https://github.com/starVLA/starVLA
+git clone https://github.com/Dicomsky/StairVLA
+cd StairVLA
 
-# Create conda environment
-conda create -n starVLA python=3.10 -y
-conda activate starVLA
-
-# Install requirements
+conda create -n stairvla python=3.10 -y
+conda activate stairvla
 pip install -r requirements.txt
-
-# Install FlashAttention2
-pip install flash-attn --no-build-isolation
-
-# Install starVLA
+pip install flash-attn --no-build-isolation   # 2.7.4.post1 is known to work with CUDA 12.0 / 12.4
 pip install -e .
 ```
 
+Download the VLM backbones into `playground/Pretrained_models/`:
+[Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct) (LIBERO, LIBERO-Plus) and
+[Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct) (real robot). The refiner's
+SigLIP encoder (`google/siglip-base-patch16-224`) is fetched from the Hugging Face Hub on first use.
 
-⚠️ **Common Issues**
-flash-attn can be tricky to install because it must match your system’s CUDA toolkit (nvcc) and PyTorch versions. The `--no-build-isolation` flag resolves most issues, but on newer systems you may need to manually choose a compatible flash-attn version. Ensure your CUDA driver/toolkit and torch versions are aligned. Check your environment:
+## Training
 
-```bash
-nvcc -V
-pip list | grep -E 'torch|transformers|flash-attn'
-```
+StairVLA is trained in two stages:
 
-If issues persist, pick a flash-attn release that matches your versions (CUDA and torch) or ask chatGPT with searching function for help with the outputs above.
+1. **Stage 1** trains the high-level policy, a standard StarVLA model with a long action horizon (H=32).
+2. **Stage 2** freezes it and trains the refiner. Each stage-2 config points to the stage-1
+   checkpoint through `trainer.pretrained_checkpoint`.
 
-We have verified that `flash-attn==2.7.4.post1` works well with nvcc versions `12.0` and `12.4`.
+| Benchmark | Stage 1 (high-level policy) | Stage 2 (refiner) |
+|---|---|---|
+| LIBERO, GR00T-base | [`run_stairvla_stage1.sh`](examples/LIBERO/train_files/run_stairvla_stage1.sh) | [`run_stairvla_stage2.sh`](examples/LIBERO/train_files/run_stairvla_stage2.sh) |
+| LIBERO, π-base | [`run_stairvla_pi_stage1.sh`](examples/LIBERO/train_files/run_stairvla_pi_stage1.sh) | TODO: config to be released |
+| LIBERO ablation: w/o action context | (same stage 1) | [`run_stairvla_stage2_no_context.sh`](examples/LIBERO/train_files/run_stairvla_stage2_no_context.sh) |
+| LIBERO-Plus | [`run_stairvla_stage1.sh`](examples/LIBERO-plus/train_files/run_stairvla_stage1.sh) | [`run_stairvla_stage2.sh`](examples/LIBERO-plus/train_files/run_stairvla_stage2.sh) |
+| PiperX Fruit25 | [`run_stairvla_stage1.sh`](examples/PiperX/fruit25/run_stairvla_stage1.sh) | [`run_stairvla_stage2.sh`](examples/PiperX/fruit25/run_stairvla_stage2.sh) |
+| PiperX PushBlock | [`run_stairvla_stage1.sh`](examples/PiperX/pushblock/run_stairvla_stage1.sh) | [`run_stairvla_stage2.sh`](examples/PiperX/pushblock/run_stairvla_stage2.sh) |
 
-</details>
-
-<details close>
-<summary><b>👀 Quick Check StarVLA
-</b></summary>
-
-
-
-```bash
-# check framework with fake examples
-python starVLA/model/framework/QwenGR00T.py
-```
-
-
-You should download [Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct) and put it as `./playground/Pretrained_models/Qwen3-VL-4B-Instruct`. It should build successfully and `print(model)`. You can also call `model.forward(fake_data)` and obtain unnormalized actions via `model.predict_action(fake_data)`.
-
-</details>
-
-<details close>
-<summary><b>🧪 Evaluate Existing Models</b></summary>
-
-We publish benchmark-specific evaluation guides inside each folder under [examples](examples).
-
-**Recommended quick start: LIBERO simulator**
-
-1. Download [Qwen2.5-VL-GR00T-LIBERO-4in1](https://huggingface.co/StarVLA/Qwen2.5-VL-GR00T-LIBERO-4in1).
-2. Follow the [LIBERO Eval](https://github.com/starVLA/starVLA/tree/starVLA/examples/LIBERO#-1-environment-setup) instructions to prepare the Python environment.
-3. Set the environment variables at the top of [`eval_libero.sh`](examples/LIBERO/eval_files/eval_libero.sh) and [`run_policy_server.sh`](examples/LIBERO/eval_files/run_policy_server.sh).
-4. Run:
+Every hyperparameter lives in the YAML next to its launcher; each launcher copies itself and its
+YAML into the run directory. Run from the repository root, for example:
 
 ```bash
-bash examples/LIBERO/eval_files/run_policy_server.sh &
-bash examples/LIBERO/eval_files/eval_libero.sh
+bash examples/LIBERO/train_files/run_stairvla_stage1.sh   # 8 GPUs, 30k steps
+bash examples/LIBERO/train_files/run_stairvla_stage2.sh   # 8 GPUs, 30k steps
 ```
 
-⚠️ **Common issue**  
-If `NotImplementedError: Framework QwenGR00T is not implemented` appears, run `python starVLA/model/framework/QwenGR00T.py` to verify your environment.
+Dataset preparation and evaluation for each benchmark:
+[LIBERO](examples/LIBERO/README.md) · [LIBERO-Plus](examples/LIBERO-plus/README.md) ·
+[PiperX](examples/PiperX/README.md). The StarVLA baselines are trained with the
+[StarVLA](https://github.com/starVLA/starVLA) recipes; the PiperX baseline configs are included here.
 
-</details>
+## Evaluation
 
-<details open>
-<summary><b>🚀 Train Your Own Model</b></summary>
-
-We ship benchmark-specific training scripts under [examples](examples). We recommend starting with the  [LIBERO suite](examples/LIBERO/train_files):
-
-1. Edit `run_libero_train.sh` to point to your checkpoint, dataset root, and desired output directory.
-2. Launch training:
+Evaluation uses StarVLA's client–server setup: the policy runs in a websocket server in this
+environment, and the simulator runs in its own environment.
 
 ```bash
-bash examples/LIBERO/train_files/run_libero_train.sh
+# Terminal 1 (stairvla env): serve the stage-2 checkpoint
+bash examples/LIBERO/eval_files/run_policy_server.sh
+
+# Terminal 2 (LIBERO env): run all four suites
+LIBERO_HOME=/path/to/LIBERO bash examples/LIBERO/eval_files/eval_libero_all.sh
 ```
 
-⚠️ **Note:** Ensure all absolute paths inside `run_libero_train.sh` match your local environment before launching.
+The server defaults follow the paper (α=0.97, M=4). To evaluate the high-level policy alone
+(the "Top-only" ablation), start the server with `hier_eval_mode=top32`.
 
-</details>
+## Checkpoints and datasets
 
+<!-- TODO: add Hugging Face links once released -->
 
+| Item | Link |
+|---|---|
+| StairVLA LIBERO checkpoints (stage 1 and stage 2) | TODO |
+| StairVLA LIBERO-Plus checkpoints | TODO |
+| PiperX Fruit25 / PushBlock datasets | TODO |
+| PiperX checkpoints | TODO |
 
-## 🌟 How does starVLA make model development Lego-like again?
-👇 StarVLA achieves “Lego-like” development via the following designs:
-<a id="model"></a>
-<details close>
-<summary><b>1. Smoke test any submodule </b></summary>
+## Citation
 
-StarVLA emphasizes a modular model design. Each major framework file can be run standalone for rapid debugging and smoke test your code. For example:
-
-```bash
-# model
-python starVLA/model/framework/QwenOFT.py --config_yaml starvla_cotrain_oxe.yaml
-# dataloader
-python starVLA/dataloader/lerobot_datasets.py --config_yaml starvla_cotrain_oxe.yaml
-
-```
-Note: `starVLA/model/framework/yourframework.py` is the single external API surface of the model; it should mirror (be structurally isomorphic to) the framework diagram in your paper.
-</details>
-<a id="data"></a>
-<details close>
-<summary><b>2. Explicit model boundaries</b></summary>
-
-StarVLA follows top‑down decomposition and the principle of high cohesion & low coupling.
-
-For example:
-- Dataloader
-  - Returns a raw, model‑agnostic dict only; no model‑specific preprocessing (e.g., tokenizer, image encoding).
-  - A single sample should include (add/remove as needed):
-    - image: list[PIL.Image] | np.ndarray
-    - lang: str
-    - action: np.ndarray[T, action_dim]
-    - state: Optional[np.ndarray[..., state_dim]]
-
-Both `framework.forward()` and `framework.predict_action()` operate directly on raw inputs, keeping train/test boundaries explicit and easy to hack.
-</details>
-<a id="config"></a>
-<details close>
-<summary><b>3. Flexible configuration system</b></summary>
-
-StarVLA uses a single global configuration object
-Parameters are passed primarily via extensible dicts, allowing overrides and controlled redundancy.
-
-</details>
-
-
-🧪 *To self‑test and iterate on StarVLA’s usability, we re‑implemented several representative VLA frameworks. Our have done a beta test: an internal developer can stand up a new VLA framework in under half a day (leat then 3 hours), and an new user can build their first custom VLA framework within a single day. More design insights for each item can be found in [assets/intro_v1.md](assets/intro_v1.md).*
-
-
----
-
-
-## 📖 FAQ
-
-<details close>
-<summary><b>Q: Why not put preprocessing in the dataloader?</b></summary>
-
-A: We profiled it: data preprocessing takes <1% time. Keeping it inside the Framework is acceptable and allows model‑specific flexible handling.
-
-</details>
-
-<details close>
-<summary><b>Q: Can I use a backbone other than Qwen2.5-VL?</b></summary>
-
-A: Yes. Implement new vision + language modules and compose them inside a Framework; any other existing models can be swapped in. Yet, due to the framework processing raw action data, it is very easy to swap in.
-</details>
-
-<details close> <summary><b>Q: Why isn't there an abstract interface for the vision tower?</b></summary>
-  
-A: We believe that VLM will become the base model and will inherently possess its own native vision tower.
-
-</details>
-
-
-<details close>
-<summary><b>Q: Can I override or add parameters via the terminal?</b></summary>
-
-A: Yes. We use OmegaConf.load(args.config_yaml) as the single configuration entry; standalone debugging also uses args.config_yaml. Parameters may be intentionally redundant; you can freely add or override them via the CLI.
-
-Examples:
-```bash
-accelerate launch \
-  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml  \
-  --num_processes 8 \
-  starVLA/training/train_internvla.py \
-  --config_yaml ./starVLA/config/training/starvla_cotrain_oxe.yaml \
-  --framework.qwenvl.base_vlm Qwen/Qwen2.5-VL-7B-Instruct \ # override framework choice
-  --framework.qwenvl.base_vlm Qwen/Qwen2.5-VL-7B-Instruct \ # override framework choice
-  --framework.action_model.new_module ${module_name} \ # plug-in a new module to action model
-```
-
-⚠️: `framework.action_model.new_module` only adds to the global config; its behavior is on your framework.
-
-
-</details>
-
-<details close>
-<summary><b>Q: Can I freeze the VLM via parameters?</b></summary>
-
-A: Yes. StarVLA uses a regex / name list to control freezing. Example:
-```
---trainer.freeze_modules "qwen_vl_interface.model.model.visual,dino_encoder" \
-```
-Tips: You can ``print(your_model)`` first to check the relative paths of your modules and list them as comma-separated values.
-(implementation in `TrainerUtils.freeze_backbones`.)
-
-</details>
-
-<details close>
-<summary><b>Q: Can I set different learning rates for different modules?</b></summary>
-
-A: Yes, starVLA also uses name: value dict to control learning group. Config example:
-```yaml
-trainer:
-  learning_rate:
-    base: 1e-05      # other modules
-    qwen_vl_interface: 1.0e-05
-    action_model: 1.0e-04
-```
-(Also referenced in `trainer_tools.build_param_lr_groups`.)
-</details>
-
-<details close>
-<summary><b>Q: Can I resume training from a checkpoint?</b></summary>
-
-A: Yes, somehow can. Specify the latest checkpoint path in `config.yaml`, e.g.:
-```yaml
-trainer:
-  pretrained_checkpoint: path_to_steps_10000.pt
-  reload_modules: "action_model"
-```
-Empty `reload_modules` means full load all model. However, starVLA does not save  `optimizer state`. It requires a lot of  memory/disk and bring limited benefit.
-</details>
-
-
-<details id="train-smaller-vlm" close>
-<summary><b>🚀 Train with a smaller VLM</b></summary>
-
-```bash
-    accelerate launch \
-      --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
-      --main_process_ip $MASTER_ADDR \
-      --main_process_port $MASTER_PORT \
-      --machine_rank $SLURM_PROCID \
-      --num_machines $SLURM_NNODES \
-      --num_processes=${TOTAL_GPUS} \
-      starVLA/training/train_starvla.py \
-      --config_yaml ./starVLA/config/training/starvla_cotrain_oxe.yaml \
-      --framework.framework_py QwenGR00T \
-      --framework.qwenvl.base_vlm microsoft/Florence-2-large \
-      --run_root_dir ${run_root_dir} \
-      --run_id ${run_id} \
-      --wandb_project your_project \
-      --wandb_entity your_name
-```
-
-Note: To ensure better compatibility with already released checkpoints, we are continuing to use `--framework.qwenvl`. This parameter will be unified in the next release.
-
-</details>
-
-
-
-## ✍️ Citation & Copyright
-
-
-StarVLA is released under the MIT License, which permits commercial use, modification, distribution, and private use. Rebases are allowed for forks and feature branches; when rebasing from upstream StarVLA, use descriptive commit messages (e.g., "chore: rebase from StarVLA") and keep at least the two latest upstream commits as separate. See [License](LICENSE) for details.
-
-
-```
-@misc{starvla2025,
-  title        = {StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing},
-  author       = {starVLA Contributors},
-  year         = {2025},
-  month        = {1},
-  version      = {1.2.0},
-  url          = {https://github.com/starVLA/starVLA},
-  doi          = {10.5281/zenodo.18264214},
-  howpublished = {GitHub repository},
-  publisher    = {GitHub},
-  keywords     = {vision-language-action, robot-learning, modular-framework}
+```bibtex
+@article{yuan2026stairvla,
+  title   = {StairVLA: Stage-Aware Hierarchical Action Generation for Vision-Language-Action Models},
+  author  = {Yuan, Shangyuan and Qi, Xinda and Pu, Yujiang and Guo, Wenliang and Tan, Xiaobo},
+  journal = {arXiv preprint arXiv:TODO},
+  year    = {2026}
 }
 ```
 
+Please also cite StarVLA, which this code is built on:
 
-## 🤝 Contributing
+```bibtex
+@misc{ye2026starvla,
+  title         = {StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing},
+  author        = {{StarVLA Community}},
+  year          = {2026},
+  eprint        = {2604.05014},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  url           = {https://arxiv.org/abs/2604.05014}
+}
+```
 
+## License and acknowledgements
 
-1) If you find an issue, please open an Issue first. If it persists or needs clarification, start a Discussion and we’ll follow up.
+StairVLA is released under the MIT License, the same license as StarVLA. The StarVLA copyright
+notice is kept in [LICENSE](LICENSE), and [NOTICE](NOTICE) lists which files are original,
+modified, or unchanged. Some action-head files keep NVIDIA license headers from GR00T.
 
-2) If you have ideas to improve StarVLA, feel free to open a PR. To make sure we will accept your effect, please align scope and design first via an Issue or by booking a short sync with this [Cooperation Form](https://forms.gle/R4VvgiVveULibTCCA).
-
-3) If you’re blocked or want to brainstorm, please fill out the [Cooperation Form](https://forms.gle/R4VvgiVveULibTCCA). We host office hours every Friday afternoon for live discussion.
-
-Tip: Before submitting a PR, run make check locally to pass formatting and lint.
-
-
-##  🙏 Acknowledgements
-This project draws inspiration and references from several notable open-source initiatives, including:  
-- [LeRobot](https://github.com/huggingface/lerobot)  
-- [GR00T](https://github.com/NVIDIA/Isaac-GR00T/tree/main)  
-- [DeepSpeed](https://github.com/deepspeedai/DeepSpeed)  
-- [Qwen-VL](https://github.com/QwenLM/Qwen3-VL/tree/main)  
-- [InternVL](https://github.com/OpenGVLab/InternVL)  
-
-The codebase was originally forked from [InternVLA-M1](https://github.com/InternRobotics/InternVLA-M1).
-
-
-
-# Star History
-Here's how our community has grown over time:
-
-[![Star History Chart](https://api.star-history.com/svg?repos=starVLA/starVLA&type=date&legend=bottom-right)](https://www.star-history.com/#starVLA/starVLA&type=date&legend=bottom-right)
-
-
-<!-- *Chart updates automatically. Click to interact with the full timeline.* -->
+We thank the [StarVLA](https://github.com/starVLA/starVLA) team for the codebase this work is built on,
+and the authors of [GR00T](https://github.com/NVIDIA/Isaac-GR00T), [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL),
+[SigLIP](https://huggingface.co/google/siglip-base-patch16-224), [LeRobot](https://github.com/huggingface/lerobot),
+[LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO), and
+[LIBERO-Plus](https://github.com/sylvestf/LIBERO-plus).

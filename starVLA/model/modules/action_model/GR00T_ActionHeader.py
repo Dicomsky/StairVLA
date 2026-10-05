@@ -318,7 +318,14 @@ class FlowmatchingActionHead(nn.Module):
         return loss
 
     @torch.no_grad()
-    def predict_action(self, vl_embs: torch.Tensor, state: torch.Tensor = None) -> torch.Tensor:
+    def predict_action(
+        self,
+        vl_embs: torch.Tensor,
+        state: torch.Tensor = None,
+        denoise_step_scale: float | torch.Tensor = 1.0,
+        num_inference_timesteps: int | None = None,
+        context_denoise_step_scale: float | torch.Tensor | None = None,
+    ) -> torch.Tensor:
         # Set initial actions as the sampled noise.
         batch_size = vl_embs.shape[0]
         device = vl_embs.device
@@ -328,21 +335,44 @@ class FlowmatchingActionHead(nn.Module):
             device=device,
         )
 
-        num_steps = self.num_inference_timesteps
+        num_steps = self.num_inference_timesteps if num_inference_timesteps is None else int(num_inference_timesteps)
+        num_steps = max(1, num_steps)
         dt = 1.0 / num_steps
+        if not torch.is_tensor(denoise_step_scale):
+            denoise_step_scale = torch.tensor(denoise_step_scale, device=device, dtype=vl_embs.dtype)
+        else:
+            denoise_step_scale = denoise_step_scale.to(device=device, dtype=vl_embs.dtype)
+        if context_denoise_step_scale is not None:
+            if not torch.is_tensor(context_denoise_step_scale):
+                context_denoise_step_scale = torch.tensor(context_denoise_step_scale, device=device, dtype=vl_embs.dtype)
+            else:
+                context_denoise_step_scale = context_denoise_step_scale.to(device=device, dtype=vl_embs.dtype)
+        if denoise_step_scale.dim() == 0:
+            denoise_step_scale = denoise_step_scale.expand(batch_size)
+        else:
+            denoise_step_scale = denoise_step_scale.reshape(-1)
+            if denoise_step_scale.numel() == 1:
+                denoise_step_scale = denoise_step_scale.expand(batch_size)
+        if context_denoise_step_scale is not None:
+            if context_denoise_step_scale.dim() == 0:
+                context_denoise_step_scale = context_denoise_step_scale.expand(batch_size)
+            else:
+                context_denoise_step_scale = context_denoise_step_scale.reshape(-1)
+                if context_denoise_step_scale.numel() == 1:
+                    context_denoise_step_scale = context_denoise_step_scale.expand(batch_size)
+        denoise_step_scale = denoise_step_scale.clamp(min=0.0, max=1.0)
+        if context_denoise_step_scale is not None:
+            context_denoise_step_scale = context_denoise_step_scale.clamp(min=0.0, max=1.0)
         
         state_features = self.state_encoder(state) if state is not None else None
 
-        # Run denoising steps.
-        for t in range(num_steps):
-            t_cont = t / float(num_steps)  # e.g. goes 0, 1/N, 2/N, ...
-            t_discretized = int(t_cont * self.num_timestep_buckets)
-
+        def predict_velocity(current_actions: torch.Tensor, progress: torch.Tensor) -> torch.Tensor:
             # Embed noised action trajectory.
-            timesteps_tensor = torch.full(
-                size=(batch_size,), fill_value=t_discretized, device=device
+            timesteps_tensor = (progress * self.num_timestep_buckets).long().clamp(
+                min=0,
+                max=self.num_timestep_buckets - 1,
             )
-            action_features = self.action_encoder(actions, timesteps_tensor)
+            action_features = self.action_encoder(current_actions, timesteps_tensor)
             # Maybe add position embedding.
             if self.config.add_pos_embed:
                 pos_ids = torch.arange(action_features.shape[1], dtype=torch.long, device=device)
@@ -363,10 +393,56 @@ class FlowmatchingActionHead(nn.Module):
             )
             pred = self.action_decoder(model_output)
 
-            pred_velocity = pred[:, -self.action_horizon :]
+            return pred[:, -self.action_horizon :]
 
-            # Update actions using euler integration.
-            actions = actions + dt * pred_velocity
+        # Run Euler denoising until each requested trajectory reaches its target
+        # scale. This keeps top/context actions on the same path until their
+        # target scales diverge, and truncates the final update instead of
+        # overshooting when the target scale is not an integer multiple of dt.
+        progress = torch.zeros(batch_size, device=device, dtype=vl_embs.dtype)
+        context_actions = None
+        if context_denoise_step_scale is None:
+            for _ in range(num_steps):
+                step = (denoise_step_scale - progress).clamp(min=0.0, max=dt)
+                if not torch.any(step > 0):
+                    break
+                pred_velocity = predict_velocity(actions, progress)
+                actions = actions + step.view(batch_size, 1, 1) * pred_velocity
+                progress = progress + step
+        else:
+            context_actions = actions.clone()
+            context_progress = progress.clone()
+            for _ in range(num_steps):
+                top_step = (denoise_step_scale - progress).clamp(min=0.0, max=dt)
+                context_step = (context_denoise_step_scale - context_progress).clamp(min=0.0, max=dt)
+                top_active = top_step > 0
+                context_active = context_step > 0
+                if not (torch.any(top_active) or torch.any(context_active)):
+                    break
+
+                same_path = (
+                    torch.allclose(actions, context_actions)
+                    and torch.allclose(progress, context_progress)
+                )
+                if same_path:
+                    pred_velocity = predict_velocity(actions, progress)
+                    if torch.any(top_active):
+                        actions = actions + top_step.view(batch_size, 1, 1) * pred_velocity
+                        progress = progress + top_step
+                    if torch.any(context_active):
+                        context_actions = context_actions + context_step.view(batch_size, 1, 1) * pred_velocity
+                        context_progress = context_progress + context_step
+                else:
+                    if torch.any(top_active):
+                        pred_velocity = predict_velocity(actions, progress)
+                        actions = actions + top_step.view(batch_size, 1, 1) * pred_velocity
+                        progress = progress + top_step
+                    if torch.any(context_active):
+                        pred_velocity = predict_velocity(context_actions, context_progress)
+                        context_actions = context_actions + context_step.view(batch_size, 1, 1) * pred_velocity
+                        context_progress = context_progress + context_step
+        if context_denoise_step_scale is not None:
+            return actions, context_actions
         return actions
 
     @property

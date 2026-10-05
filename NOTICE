@@ -1,0 +1,78 @@
+StairVLA — provenance and licensing
+===================================
+
+StairVLA is built on StarVLA (https://github.com/starVLA/starVLA), which is
+distributed under the MIT License. The StarVLA copyright notice and permission
+notice are retained in LICENSE. The git history of this repository starts from
+StarVLA commit 29f97a9; every StarVLA commit up to that point is preserved, and
+the StairVLA changes are added on top.
+
+1. Original to StairVLA
+-----------------------
+  starVLA/model/framework/HierarchicalVLA.py
+      High-level policy wrapper, partial-denoising trajectory construction,
+      flow-matching velocity target, chunk batching, and hierarchical inference
+      with high-level trajectory reuse.
+  starVLA/model/modules/action_model/Hierarchical_ActionHead.py
+      Low-level refiner: cross-attention DiT, real-time observation encoder,
+      high-level feature compression, temporal action context, masked loss.
+  examples/LIBERO/train_files/*          (StairVLA configs and launchers)
+  examples/LIBERO/eval_files/eval_libero_all.sh
+  examples/LIBERO-plus/train_files/*
+  examples/LIBERO-plus/eval_files/eval_libero_all.sh
+  examples/PiperX/**                     (real-robot configs and data preparation)
+  scripts/benchmark_latency.py
+
+2. StarVLA files redistributed unmodified from a later StarVLA revision
+-----------------------------------------------------------------------
+  starVLA/model/framework/QwenPI_v3.py
+      Identical to starVLA/model/framework/VLM4A/QwenPI_v3.py on StarVLA's main
+      branch; moved to sit next to the other frameworks.
+
+3. StarVLA files modified by the StairVLA authors
+-------------------------------------------------
+  starVLA/model/framework/__init__.py
+  starVLA/model/framework/base_framework.py
+  starVLA/model/framework/share_tools.py
+  starVLA/model/framework/QwenGR00T.py
+  starVLA/model/framework/QwenPI.py
+  starVLA/model/modules/action_model/GR00T_ActionHeader.py
+  starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py
+  starVLA/model/modules/vlm/__init__.py
+  starVLA/model/modules/vlm/QWen3.py
+  starVLA/dataloader/__init__.py
+  starVLA/dataloader/lerobot_datasets.py
+  starVLA/dataloader/gr00t_lerobot/data_config.py
+  starVLA/dataloader/gr00t_lerobot/datasets.py
+  starVLA/dataloader/gr00t_lerobot/embodiment_tags.py
+  starVLA/dataloader/gr00t_lerobot/mixtures.py
+  starVLA/training/train_starvla.py
+  deployment/model_server/server_policy.py
+  deployment/model_server/tools/websocket_policy_client.py
+  deployment/model_server/tools/websocket_policy_server.py
+  examples/LIBERO/data_preparation.sh
+  examples/LIBERO/eval_files/{eval_libero.py, model2libero_interface.py, run_policy_server.sh}
+  examples/LIBERO-plus/eval_files/{aggregate_results.py, eval_libero.py,
+                                   model2libero_interface.py, run_policy_server.sh}
+
+  StarVLA modules that the paper does not use (other frameworks, VLM backbones,
+  and benchmarks) were removed from this repository; they remain available in
+  StarVLA.
+
+4. All other files
+------------------
+  Unmodified from StarVLA.
+
+5. Third-party license headers retained in-file
+-----------------------------------------------
+  starVLA/model/modules/action_model/flow_matching_head/action_encoder.py
+  starVLA/model/modules/action_model/flow_matching_head/cross_attention_dit.py
+      SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+      SPDX-License-Identifier: Apache-2.0
+      (unmodified from StarVLA)
+  starVLA/model/modules/action_model/GR00T_ActionHeader.py
+  starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py
+      Carry the header "Copyright 2025 NVIDIA Corp. and affiliates. All rights
+      reserved." as distributed by StarVLA. The headers are kept as received;
+      this NOTICE serves as the statement that the StairVLA authors modified
+      both files.

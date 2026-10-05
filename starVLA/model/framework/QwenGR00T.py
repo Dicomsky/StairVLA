@@ -173,10 +173,20 @@ class Qwen_GR00T(baseframework):
             last_hidden = qwenvl_outputs.hidden_states[-1]   # [B, L, H]
 
         state = torch.from_numpy(np.array(state)).to(last_hidden.device, dtype=last_hidden.dtype) if state is not None else None
+        denoise_step_scale = float(kwargs.get("denoise_step_scale", getattr(self, "eval_denoise_step_scale", 1.0)))
+        num_inference_timesteps = kwargs.get(
+            "num_inference_timesteps",
+            getattr(self, "eval_num_inference_timesteps", None),
+        )
         
         # Step 4: Action Expert Forward
         with torch.autocast("cuda", dtype=torch.float32):
-            pred_actions = self.action_model.predict_action(last_hidden, state)  # (B, chunk_len, action_dim)
+            pred_actions = self.action_model.predict_action(
+                last_hidden,
+                state,
+                denoise_step_scale=denoise_step_scale,
+                num_inference_timesteps=num_inference_timesteps,
+            )  # (B, chunk_len, action_dim)
 
         normalized_actions = pred_actions.detach().cpu().numpy()
         return {"normalized_actions": normalized_actions}

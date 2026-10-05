@@ -614,6 +614,25 @@ class LeRobotSingleDataset(Dataset):
             return (not dist.is_initialized()) or dist.get_rank() == 0
         
         action_mode = _normalize_action_mode(self.data_cfg.get("action_mode", "abs") if self.data_cfg else "abs")
+        statistics_modes_cfg = self.data_cfg.get("action_statistics_modes", None) if self.data_cfg else None
+        if statistics_modes_cfg is None:
+            statistics_modes = ["abs", "delta", "rel"]
+        else:
+            if isinstance(statistics_modes_cfg, str):
+                statistics_modes_cfg = [
+                    item.strip()
+                    for item in statistics_modes_cfg.split(",")
+                    if item.strip()
+                ]
+            statistics_modes = []
+            for mode in statistics_modes_cfg:
+                mode = _normalize_action_mode(str(mode))
+                if mode not in statistics_modes:
+                    statistics_modes.append(mode)
+            if action_mode not in statistics_modes:
+                statistics_modes.append(action_mode)
+            if "abs" not in statistics_modes:
+                statistics_modes.insert(0, "abs")
         le_statistics_by_mode = None
 
         stats_path = self.dataset_path / LE_ROBOT_STATS_FILENAME
@@ -694,7 +713,9 @@ class LeRobotSingleDataset(Dataset):
                 le_statistics_by_mode["abs"] = calculate_dataset_statistics(parquet_files_filtered)
                 computed_any = True
 
-            for mode in ["delta", "rel"]:
+            for mode in statistics_modes:
+                if mode == "abs":
+                    continue
                 if mode not in le_statistics_by_mode:
                     if mode == "delta":
                         le_statistics_by_mode[mode] = calculate_delta_action_statistics(
@@ -1243,12 +1264,44 @@ class LeRobotSingleDataset(Dataset):
         trajectory_id, base_index = self.all_steps[index]
         raw_data = self.get_step_data(trajectory_id, base_index)
         data = self.transforms(raw_data)
-        return self._pack_sample(data)
+        sample = self._pack_sample(data)
+        sample["action_valid_mask"] = self._make_action_valid_mask(trajectory_id, base_index)
+        return sample
+
+    def _make_action_valid_mask(self, trajectory_id: int, base_index: int) -> np.ndarray:
+        """Return a timestep mask for unpadded action targets."""
+        if "action" not in self.modality_keys or not self.modality_keys["action"]:
+            return np.ones((0,), dtype=bool)
+        action_key = self.modality_keys["action"][0]
+        step_indices = self.delta_indices[action_key] + base_index
+        trajectory_index = self.get_trajectory_index(trajectory_id)
+        trajectory_length = self.trajectory_lengths[trajectory_index]
+        return ((step_indices >= 0) & (step_indices < trajectory_length)).astype(bool)
 
     def _pack_sample(self, data: dict) -> dict:
         """Pack transformed modality data into training sample format."""
+        export_obs_anchors = (
+            self.data_cfg is not None
+            and self.data_cfg.get("export_observation_anchors", False) not in ["False", False]
+        )
         prim_images = []
         wrist_views = []
+        obs_anchor_images = None
+        if export_obs_anchors and self.modality_keys["video"]:
+            num_obs_anchors = len(data[self.modality_keys["video"][0]])
+            obs_anchor_images = []
+            for anchor_idx in range(num_obs_anchors):
+                anchor_prim = []
+                anchor_wrist = []
+                for video_key in self.modality_keys["video"]:
+                    image = data[video_key][anchor_idx]
+                    image = Image.fromarray(image).resize((224, 224))
+                    if "wrist" not in video_key:
+                        anchor_prim.append(image)
+                    else:
+                        anchor_wrist.append(image)
+                obs_anchor_images.append(anchor_prim + anchor_wrist)
+
         for video_key in self.modality_keys["video"]:
             image = data[video_key][0]
             image = Image.fromarray(image).resize((224, 224))
@@ -1270,6 +1323,8 @@ class LeRobotSingleDataset(Dataset):
             "lang": language,
             "language": language,
         }
+        if obs_anchor_images is not None:
+            sample["obs_anchor_images"] = obs_anchor_images
 
         if self.data_cfg is not None and self.data_cfg.get("include_state", False) not in ["False", False]:
             state = []
@@ -1277,6 +1332,8 @@ class LeRobotSingleDataset(Dataset):
                 state.append(data[state_key])
             state = np.concatenate(state, axis=1).astype(np.float16)
             sample["state"] = state
+            if export_obs_anchors:
+                sample["obs_anchor_states"] = state
 
         return sample
 
@@ -2194,6 +2251,7 @@ class LeRobotMixtureDataset(Dataset):
                 raw_data = dataset.get_step_data(trajectory_id, step)    
                 data = dataset.transforms(raw_data)
                 sample = dataset._pack_sample(data)
+                sample["action_valid_mask"] = dataset._make_action_valid_mask(trajectory_id, step)
                 sample["robot_tag"] = dataset.tag
                 return sample
                 

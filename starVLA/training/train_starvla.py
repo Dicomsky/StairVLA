@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import time
 from pathlib import Path
 from typing import Tuple
@@ -204,6 +205,23 @@ class VLATrainer(TrainerUtils):
         self.accelerator.load_state(checkpoint_path)
         self.accelerator.print(f"Resumed from checkpoint: {checkpoint_path}")
 
+    def _prune_old_checkpoints(self, suffix):
+        """Keep only the `trainer.keep_last_n` most recent checkpoints (<= 0 keeps all)."""
+        keep_last_n = getattr(self.config.trainer, "keep_last_n", 3)
+        if keep_last_n <= 0:
+            return
+
+        pattern = re.compile(r"^steps_(\d+)" + re.escape(suffix) + r"$")
+        found = []
+        for name in os.listdir(self.checkpoint_dir):
+            match = pattern.match(name)
+            if match:
+                found.append((int(match.group(1)), name))
+
+        for _, name in sorted(found, reverse=True)[keep_last_n:]:
+            os.remove(os.path.join(self.checkpoint_dir, name))
+            self.accelerator.print(f"🧹 Removed old checkpoint {name}")
+
     def _save_checkpoint(self):
         """Save current training state."""
         if self.accelerator.is_main_process:
@@ -212,13 +230,40 @@ class VLATrainer(TrainerUtils):
 
             state_dict = self.accelerator.get_state_dict(self.model)
             if save_format == "safetensors":
-                from safetensors.torch import save_file
-
-                save_file(state_dict, checkpoint_path + "_model.safetensors")
+                suffix = "_model.safetensors"
             elif save_format == "pt":
-                torch.save(state_dict, checkpoint_path + "_pytorch_model.pt")
+                suffix = "_pytorch_model.pt"
             else:
                 raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
+
+            final_path = checkpoint_path + suffix
+            tmp_path = final_path + ".tmp"
+
+            # Fail loudly on a full disk instead of leaving a truncated checkpoint behind.
+            needed = sum(t.numel() * t.element_size() for t in state_dict.values())
+            free = shutil.disk_usage(self.checkpoint_dir).free
+            if free < needed * 1.1:
+                raise RuntimeError(
+                    f"Not enough disk space for checkpoint at step {self.completed_steps}: "
+                    f"need ~{needed / 1e9:.1f} GB (+10% margin), {free / 1e9:.1f} GB free on "
+                    f"{self.checkpoint_dir}. Free space or lower trainer.keep_last_n."
+                )
+
+            # Write to a temp file and rename, so a failed save never clobbers the last good checkpoint.
+            try:
+                if save_format == "safetensors":
+                    from safetensors.torch import save_file
+
+                    save_file(state_dict, tmp_path)
+                else:
+                    torch.save(state_dict, tmp_path)
+                os.replace(tmp_path, final_path)
+            except Exception:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                raise
+
+            self._prune_old_checkpoints(suffix)
 
             summary_data = {"steps": self.completed_steps}
             with open(os.path.join(self.config.output_dir, "summary.jsonl"), "a") as f:
@@ -312,6 +357,9 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             normalized_actions = output_dict["normalized_actions"]
             actions = np.array(actions)
+            common_horizon = min(normalized_actions.shape[1], actions.shape[1])
+            normalized_actions = normalized_actions[:, :common_horizon]
+            actions = actions[:, :common_horizon]
             num_pots = np.prod(actions.shape)
             score = TrainerUtils.euclidean_distance(normalized_actions, actions)
             step_metrics["mse_score"] = score / num_pots
@@ -347,9 +395,18 @@ class VLATrainer(TrainerUtils):
             self.optimizer.step()
             self.lr_scheduler.step()
 
-        return {
+        log_dict = {
             "action_dit_loss": action_loss.item(),
         }
+        if "top_loss" in output_dict:
+            log_dict["top_loss"] = output_dict["top_loss"].item()
+        if "refine_loss" in output_dict:
+            log_dict["refine_loss"] = output_dict["refine_loss"].item()
+        if "residual_bound_loss" in output_dict:
+            log_dict["residual_bound_loss"] = output_dict["residual_bound_loss"].item()
+        if "action_valid_ratio" in output_dict:
+            log_dict["action_valid_ratio"] = output_dict["action_valid_ratio"].item()
+        return log_dict
 
     def _finalize_training(self):
         """Training end processing."""

@@ -1,4 +1,5 @@
 import dataclasses
+import gc
 import datetime as dt
 import json
 import logging
@@ -53,6 +54,10 @@ class Args:
     post_process_action: bool = True
 
     job_name: str = "test"
+    action_chunk_size_override: int | None = None
+    summary_json_path: str | None = None
+    global_success_offset: int = 0
+    global_episode_offset: int = 0
 
 
 def eval_libero(args: Args) -> None:
@@ -89,11 +94,13 @@ def eval_libero(args: Args) -> None:
         host=args.host,
         port=args.port,
         image_size=args.resize_size,
+        action_chunk_size_override=args.action_chunk_size_override,
     )
 
 
     # Start evaluation
     total_episodes, total_successes = 0, 0
+    task_results = []
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
         # Get task
         task = task_suite.get_task(task_id)
@@ -151,6 +158,11 @@ def eval_libero(args: Args) -> None:
                         obs["robot0_gripper_qpos"],
                     )
                 )
+                joint_state = None
+                if "robot0_joint_pos" in obs:
+                    joint_state = np.expand_dims(
+                        np.asarray(obs["robot0_joint_pos"], dtype=np.float32), axis=0
+                    )
 
                 observation = { # 
                     "observation.primary": np.expand_dims(
@@ -163,7 +175,6 @@ def eval_libero(args: Args) -> None:
                     "instruction": [str(task_description)],
                 }
 
-                # align key with model API --> 这里给了两个图像 --> check training
                 example_dict = {
                     "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
                     "lang": observation["instruction"][0],
@@ -232,18 +243,61 @@ def eval_libero(args: Args) -> None:
                 f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)"
             )
 
-        # Log final results
-        logging.info(
-            f"Current task success rate: {float(task_successes) / float(task_episodes)}"
-        )
-        logging.info(
-            f"Current total success rate: {float(total_successes) / float(total_episodes)}"
-        )
+        # Log final results for this task and close the EGL context while it is still current.
+        task_rate = float(task_successes) / float(task_episodes) if task_episodes else 0.0
+        suite_rate = float(total_successes) / float(total_episodes) if total_episodes else 0.0
+        global_successes = args.global_success_offset + total_successes
+        global_episodes = args.global_episode_offset + total_episodes
+        global_rate = float(global_successes) / float(global_episodes) if global_episodes else 0.0
+        task_results.append({
+            "task_id": int(task_id),
+            "task_description": task_description,
+            "successes": int(task_successes),
+            "episodes": int(task_episodes),
+            "success_rate": task_rate,
+            "suite_successes_so_far": int(total_successes),
+            "suite_episodes_so_far": int(total_episodes),
+            "suite_success_rate_so_far": suite_rate,
+            "global_successes_so_far": int(global_successes),
+            "global_episodes_so_far": int(global_episodes),
+            "global_success_rate_so_far": global_rate,
+        })
+        logging.info(f"Finished task: {task_description}")
+        logging.info(f"Current task success rate: {task_rate:.4f} ({task_successes}/{task_episodes})")
+        logging.info(f"Current suite success rate: {suite_rate:.4f} ({total_successes}/{total_episodes})")
+        logging.info(f"Current global success rate: {global_rate:.4f} ({global_successes}/{global_episodes})")
+        try:
+            env.close()
+        except Exception as exc:
+            logging.warning(f"Failed to close LIBERO env cleanly: {exc}")
+        del env
+        gc.collect()
 
-    logging.info(
-        f"Total success rate: {float(total_successes) / float(total_episodes)}"
-    )
+    final_rate = float(total_successes) / float(total_episodes) if total_episodes else 0.0
+    logging.info(f"Total success rate: {final_rate}")
     logging.info(f"Total episodes: {total_episodes}")
+
+    if args.summary_json_path:
+        summary = {
+            "task_suite_name": args.task_suite_name,
+            "total_successes": int(total_successes),
+            "total_episodes": int(total_episodes),
+            "success_rate": final_rate,
+            "global_success_offset": int(args.global_success_offset),
+            "global_episode_offset": int(args.global_episode_offset),
+            "global_total_successes": int(args.global_success_offset + total_successes),
+            "global_total_episodes": int(args.global_episode_offset + total_episodes),
+            "global_success_rate": (
+                float(args.global_success_offset + total_successes)
+                / float(args.global_episode_offset + total_episodes)
+                if args.global_episode_offset + total_episodes else 0.0
+            ),
+            "task_results": task_results,
+        }
+        summary_path = pathlib.Path(args.summary_json_path)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(summary, indent=2))
+        logging.info(f"Summary JSON saved to: {summary_path}")
 
 
 def _get_libero_env(task, resolution, seed):
@@ -294,6 +348,6 @@ def start_debugpy_once():
     start_debugpy_once._started = True
 
 if __name__ == "__main__":
-    if os.getenv("DEBUG", False):
-        start_debugpy_once()
+    # if os.getenv("DEBUG", False):
+    #     start_debugpy_once()
     tyro.cli(eval_libero)

@@ -1,89 +1,60 @@
-# 🚀 LIBERO-plus zero shot Evaluation
+# LIBERO-Plus
 
-This document provides instructions for reproducing our **zero shot experimental results** with LIBERO-plus.  
-The evaluation process consists of two main parts:  
+[LIBERO-Plus](https://github.com/sylvestf/LIBERO-plus) adds seven kinds of perturbation (camera,
+robot, language, light, background, noise, layout) to the LIBERO tasks. We report two settings:
 
-1. Setting up the `LIBERO-plus` environment and dependencies.  
-2. Running the evaluation by launching services in both `starVLA` and `LIBERO-plus` environments.  
+- **Zero-shot:** the LIBERO-trained StairVLA model (see [../LIBERO](../LIBERO/README.md)) is evaluated
+  directly in the perturbed environments.
+- **Fine-tuned:** StairVLA is trained on the LIBERO-Plus training set with the launchers below.
 
-We have verified that this workflow runs successfully on both **NVIDIA A100** and **RTX 4090** GPUs.  
+| Setting | Camera | Robot | Language | Light | Background | Noise | Layout | Avg. |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Zero-shot | 43.7 | 54.5 | 82.5 | 93.4 | 90.5 | 67.8 | 74.0 | 70.4 |
+| Fine-tuned | 95.5 | 48.4 | 83.7 | 96.8 | 94.9 | 95.4 | 77.4 | 83.7 |
 
----
+## 1. Data
 
+Put the LeRobot-format LIBERO-Plus training data under `playground/Datasets/LEROBOT_LIBERO_PLUS_DATA`
+with one folder per suite (`libero_plus_spatial`, `libero_plus_object`, `libero_plus_goal`,
+`libero_plus_10`), and copy [`train_files/modality.json`](train_files/modality.json) into each
+folder's `meta/`. The `libero_plus_all` mixture in
+`starVLA/dataloader/gr00t_lerobot/mixtures.py` combines the four suites.
 
-## ⬇️ 0. Download Checkpoints
+## 2. Training
 
-We use models trained exclusively on LIBERO to perform zero-shot evaluation on LIBERO-plus.: [🤗 StarVLA/bench-libero](https://huggingface.co/collections/StarVLA/bench-libero). Their corresponding results on LIBERO-plus are summarized in the table below.
+| Launcher | What it trains | Global batch | Steps |
+|---|---|:---:|:---:|
+| [`run_stairvla_stage1.sh`](train_files/run_stairvla_stage1.sh) | High-level policy (Qwen3-VL-4B, H=32) | 128 | 50k |
+| [`run_stairvla_stage2.sh`](train_files/run_stairvla_stage2.sh) | Refiner on top of the frozen stage-1 policy | 128 | 50k |
 
-### 📊 Experimental Results
+## 3. Evaluation
 
-| Model               | Camera | Robot | Language|Light|Background|Noise|Layout|Total|
-|---------------------|-------|--------|---------|--------|------|-------|-------|-------|
-| OpenVLA  | 0.8 | 3.5 | 23.0 | 8.1 | 34.8 | 15.2 | 28.5 | 15.6 |
-| OpenVLA-OFT  | 56.4 | 31.9 | 79.5 | 88.7 | 93.3 | 75.8 | 74.2 | 69.6 |
-| π₀ | 13.8 | 6.0 | 58.8 | 85.0 | 81.4 | 79.0 | 68.9 | 53.6 |
-| π₀-Fast | 65.1 | 21.6 | 61.0 | 73.2 | 73.2 | 74.4 | 68.8 | 61.6 |
-| ABot-M0  | 60.4 | 67.9 | 86.4 | 96.2 | 91.6 | 86.4 | 82.6 | 80.5 |
-| **Qwen2.5-VL-FAST**   | 19.6 | 27.6 | 74.5 | 75.2 | 71.0 | 27.4 | 62.7 | 48.9 |
-| **Qwen2.5-VL-GR00T**   | 32.9 | 50.8 | 86.3 | 96.2 | 85.7 | 62.0 | 73.6 | 66.4 |
-| **Qwen2.5-VL-OFT**   | 34.4 | 63.7 | 82.1 | 86.9 | 88.8 | 53.3 | 74.6 | 67.2 |
-| **Qwen3-VL-OFT**   | 47.0 | 60.1 | 87.0 | 96.3 | 95.3 | 73.1 | 79.2 | 75.0 |
-| **Qwen3-VL-PI**   | 64.3 | 57.2 | 82.8 | 94.2 | 94.0 | 79.6 | 78.2 | 77.0 |
-
-
-
----
-
-
-## 📦 1. Environment Setup
-
-To set up the environment, please first follow the official [LIBERO-plus repository](https://github.com/sylvestf/LIBERO-plus) to install the base `LIBERO-plus` environment.  
-
-
-
-Afterwards, inside the `LIBERO-plus` environment, install the following dependencies:  
+Install LIBERO-Plus by following its [repository](https://github.com/sylvestf/LIBERO-plus), then
+inside that environment:
 
 ```bash
-pip install tyro matplotlib mediapy websockets msgpack
-pip install numpy==1.24.4
+pip install -r examples/LIBERO-plus/eval_files/libero_plus_requirements.txt
 ```
 
----
+Run the following two commands from the repository root, each in its own terminal.
 
-## 🚀 2. Evaluation Workflow
-
-The evaluation should be run **from the repository root** using **two separate terminals**, one for each environment:  
-
-- **starVLA environment**: runs the inference server.  
-- **LIBERO-plus environment**: runs the simulation.  
-
-### Step 1. Start the server (starVLA environment)
-
-In the first terminal, activate the `starVLA` conda environment and run:  
+**Terminal 1, StairVLA environment: policy server.**
 
 ```bash
-bash examples/LIBERO-plus/eval_files/run_policy_server.sh
+your_ckpt=<stage-2 checkpoint> bash examples/LIBERO-plus/eval_files/run_policy_server.sh
 ```
 
-⚠️ **Note:** Please ensure that you specify the correct checkpoint path in `examples/LIBERO-plus/eval_files/run_policy_server.sh`  
-
-
----
-
-### Step 2. Start the simulation (LIBERO-plus environment)
-
-In the second terminal, activate the `LIBERO-plus` conda environment and run:  
+**Terminal 2, LIBERO-Plus environment: all four suites.**
 
 ```bash
-bash examples/LIBERO-plus/eval_files/eval_libero.sh
+export LIBERO_HOME=/path/to/LIBERO-plus
+your_ckpt=<stage-2 checkpoint> bash examples/LIBERO-plus/eval_files/eval_libero_all.sh
 ```
-⚠️ **Note:** Please ensure that you specify the correct checkpoint path in `eval_libero.sh` to load action unnormalization stats. 
 
-Also ensure the environment variables at the top of `eval_libero.sh` are correctly set.
+For zero-shot evaluation, pass the LIBERO stage-2 checkpoint instead. The server takes the same
+options as for [LIBERO](../LIBERO/README.md#server-options).
 
-
----
-
-⚠️ **Note:** Since LIBERO-plus has 10,030 tasks, completing all the evaluations will take an extremely long time. It is recommended to run multiple model instances in parallel for the evaluations.
-
-
+LIBERO-Plus has more than 10,000 task variants, so a full evaluation takes a long time; running
+several server/simulator pairs in parallel (different `port`/`base_port` and `suites`) helps.
+`LOG_DIR=<log folder> python examples/LIBERO-plus/eval_files/aggregate_results.py` merges the
+per-suite, per-category results into `overall_results.json`.

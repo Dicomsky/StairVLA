@@ -3,15 +3,16 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "starVLA"
+name = "StairVLA"
 authors = [
-    {name = "Jinhui Ye", email="jinhuiyes@gmail.com"},
-    {name = "Fangjing Wang", email="fangjing_wang@outlook.com"},
-    {name = "Junqiu Yu", email="michaelyu1101@163.com"},
-
+    {name = "Shangyuan Yuan"},
+    {name = "Xinda Qi"},
+    {name = "Yujiang Pu"},
+    {name = "Wenliang Guo"},
+    {name = "Xiaobo Tan"},
 ]
-description = "StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing ."
-version = "1.0.1"
+description = "StairVLA: Stage-Aware Hierarchical Action Generation for Vision-Language-Action Models. Built on StarVLA."
+version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["vision-language-actions models", " robotic manipulation", "multimodal pretraining", "robot learning", "generative models"]

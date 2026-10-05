@@ -1,28 +1,49 @@
-# This CITATION.cff file was generated with cffinit.
-# Visit https://bit.ly/cffinit to generate yours today!
-
 cff-version: 1.2.0
 title: >-
-  StarVLA: A Lego-like Codebase for Vision-Language-Action
-  Model Developing
+  StairVLA: Stage-Aware Hierarchical Action Generation for
+  Vision-Language-Action Models
 message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
+  If you use this software, please cite the StairVLA paper and the StarVLA
+  codebase it is built on.
 type: software
 authors:
-  - name: starVLA Community
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.18264214
-repository-code: 'https://github.com/starVLA/starVLA'
-url: 'https://starvla.github.io/'
-abstract: >-
-  A modular, Lego-like codebase for developing
-  Vision-Language-Action models.
-keywords:
-  - vision-language-action
-  - robot-learning
-  - modular-framework
+  - given-names: Shangyuan
+    family-names: Yuan
+  - given-names: Xinda
+    family-names: Qi
+  - given-names: Yujiang
+    family-names: Pu
+  - given-names: Wenliang
+    family-names: Guo
+  - given-names: Xiaobo
+    family-names: Tan
+repository-code: 'https://github.com/Dicomsky/StairVLA'
 license: MIT
-version: 1.2.0
-date-released: '2026-01-15'
+preferred-citation:
+  type: article
+  title: >-
+    StairVLA: Stage-Aware Hierarchical Action Generation for
+    Vision-Language-Action Models
+  authors:
+    - given-names: Shangyuan
+      family-names: Yuan
+    - given-names: Xinda
+      family-names: Qi
+    - given-names: Yujiang
+      family-names: Pu
+    - given-names: Wenliang
+      family-names: Guo
+    - given-names: Xiaobo
+      family-names: Tan
+  year: 2026
+references:
+  - type: software
+    title: >-
+      StarVLA: A Lego-like Codebase for Vision-Language-Action
+      Model Developing
+    authors:
+      - name: starVLA Community
+    repository-code: 'https://github.com/starVLA/starVLA'
+    identifiers:
+      - type: doi
+        value: 10.5281/zenodo.18264214

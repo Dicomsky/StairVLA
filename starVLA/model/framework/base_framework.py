@@ -101,7 +101,7 @@ class baseframework(PreTrainedModel):
         model_keys = set(FrameworkModel.state_dict().keys())
         checkpoint_keys = set(model_state_dict.keys())
         try:
-            FrameworkModel.load_state_dict(model_state_dict, strict=True)
+            FrameworkModel.load_state_dict(model_state_dict, strict=True, assign=True)
         except RuntimeError as e:
             # must keep all keys matched
             common_keys = model_keys.intersection(checkpoint_keys)

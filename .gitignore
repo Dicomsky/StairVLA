@@ -5,6 +5,8 @@ third_party/
 __pycache__/
 *.py[cod]
 *$py.class
+.codex
+logs/
 
 # C extensions
 *.so
@@ -152,7 +154,6 @@ dmypy.json
 cache/
 data/
 playground/Models
-=4.43.2
 
 # temp
 playground/BuildData
@@ -161,37 +162,14 @@ playground/Checkpoints
 playground/Pretrained_models
 playground/Datasets
 
-eval/SimplerEnv
 
 results
 nohup.out
 *.out
-length_distribution.png
-eval/MMBench/*.jpg
-eval/*/*.jpg
-eval/*/*.png
-eval/**/*.ipynb
 # scripts
 # scripts
-bar
-eval/MMBench/*.jpeg
-eval/MMBench/play_ground_bbox.ipynb
-eval/MMBench/spatial_understanding.ipynb
-llavavla/conf/qwenvla_lmdb_genmanip.yaml
-annotated_image.png
-data_processed
-llavavla/conf/qwenvla_lmdb_3Lpretrain.yaml
-extracted_frames
-starVLA/config/deepseeds/*
-**/bar
-llavavla/model/openvla_temp
-real_deployment/upload/push_model_to_hf.py
-real_deployment/deploy/*bar
 **/*.mp4
 # but allow demo video data
-!playground/demo_data/**/*.mp4
-!playground/demo_data/**/data/
-!playground/demo_data/**/*.parquet
 experiments/libero/logs/2025-08-10/17-18-26+checkpoints_steps_60000_pytorch_model.pt_s1-8_s2-16_s2cand-5_ntl-1.0_ntu-1.0_ttl-0.9_ttu-1.0/rollout_put_the_bowl_on_top_of_the_cabinet_failure.mp4
 
 **/*.log

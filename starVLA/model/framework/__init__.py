@@ -3,12 +3,12 @@ Framework factory utilities.
 Automatically builds registered framework implementations
 based on configuration.
 
-Each framework module (e.g., M1.py, QwenFast.py) should register itself:
+Each framework module (e.g., QwenGR00T.py, HierarchicalVLA.py) should register itself:
     from starVLA.model.framework.framework_registry import FRAMEWORK_REGISTRY
 
-    @FRAMEWORK_REGISTRY.register("InternVLA-M1")
-    def build_model_framework(config):
-        return InternVLA_M1(config=config)
+    @FRAMEWORK_REGISTRY.register("QwenGR00T")
+    class Qwen_GR00T(baseframework):
+        ...
 """
 
 import pkgutil
@@ -37,7 +37,7 @@ def build_framework(cfg):
     Build a framework model from config.
     Args:
         cfg: Config object (OmegaConf / namespace) containing:
-             cfg.framework.name: Identifier string (e.g. "InternVLA-M1")
+             cfg.framework.name: Identifier string (e.g. "HierarchicalVLA")
     Returns:
         nn.Module: Instantiated framework model.
     """
@@ -45,16 +45,6 @@ def build_framework(cfg):
     if not hasattr(cfg.framework, "name"): 
         cfg.framework.name = cfg.framework.framework_py  # Backward compatibility for legacy config yaml
         
-    if cfg.framework.name == "QwenOFT":
-        from starVLA.model.framework.QwenOFT import Qwenvl_OFT
-        return Qwenvl_OFT(cfg)
-    elif cfg.framework.name == "QwenFast":
-        from starVLA.model.framework.QwenFast import Qwenvl_Fast
-        return Qwenvl_Fast(cfg)
-    elif cfg.framework.name == "NeuroVLA":
-        from starVLA.model.framework.NeuroVLA import NeuroVLA
-        return NeuroVLA(cfg)
-
     # auto detect from registry
     framework_id = cfg.framework.name
     if framework_id not in FRAMEWORK_REGISTRY._registry:

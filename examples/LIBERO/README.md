@@ -1,123 +1,84 @@
-# 🚀 LIBERO Evaluation
+# LIBERO
 
-This document provides instructions for reproducing our **experimental results** with LIBERO.  
-The evaluation process consists of two main parts:  
+Training and evaluation of StairVLA on the four LIBERO suites (Spatial, Object, Goal, Long). One model
+is trained jointly on all four suites; every task is evaluated with 50 rollouts.
 
-1. Setting up the `LIBERO` environment and dependencies.  
-2. Running the evaluation by launching services in both `starVLA` and `LIBERO` environments.  
+## 1. Data
 
-We have verified that this workflow runs successfully on both **NVIDIA A100** and **RTX 4090** GPUs.  
+Download the four LeRobot-format LIBERO datasets (no-noops versions) and place `modality.json` in
+each dataset's `meta/` folder:
 
----
+- [libero_spatial_no_noops_1.0.0_lerobot](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_spatial_no_noops_1.0.0_lerobot)
+- [libero_object_no_noops_1.0.0_lerobot](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_object_no_noops_1.0.0_lerobot)
+- [libero_goal_no_noops_1.0.0_lerobot](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot)
+- [libero_10_no_noops_1.0.0_lerobot](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot)
 
+The StarVLA script below does all of this and links the result to
+`playground/Datasets/LEROBOT_LIBERO_DATA`:
 
-## ⬇️ 0. Download Checkpoints
+```bash
+export DEST=/path/to/your/data/directory
+bash examples/LIBERO/data_preparation.sh
+```
 
+## 2. Training
 
-We provide a collection of pretrained checkpoints on Hugging Face to make community evaluation easier: [🤗 StarVLA/bench-libero](https://huggingface.co/collections/StarVLA/bench-libero). Their corresponding results on LIBERO are summarized in the table below.
+| Launcher | What it trains | Global batch | Steps |
+|---|---|:---:|:---:|
+| [`run_stairvla_stage1.sh`](train_files/run_stairvla_stage1.sh) | High-level policy, GR00T-style (Qwen3-VL-4B, H=32) | 128 | 30k |
+| [`run_stairvla_stage2.sh`](train_files/run_stairvla_stage2.sh) | Refiner (h=5, k=5), on top of the frozen stage-1 policy | 128 | 30k |
+| [`run_stairvla_stage2_no_context.sh`](train_files/run_stairvla_stage2_no_context.sh) | Ablation: refiner without temporal action context | 128 | 30k |
+| [`run_stairvla_pi_stage1.sh`](train_files/run_stairvla_pi_stage1.sh) | High-level policy, π-style (Qwen3-VL-4B, H=32) | see YAML | 30k |
+| TODO | Refiner for the π-base model | | |
 
-### 📊 Experimental Results
+All launchers use 8 GPUs and are run from the repository root. Stage 2 loads
+`./results/Checkpoints/libero_stairvla_stage1/checkpoints/steps_30000_pytorch_model.pt`; change
+`trainer.pretrained_checkpoint` in the stage-2 YAML if your stage-1 run lives elsewhere.
 
-| Model               | Steps | Epochs | Spatial | Object | Goal | Long  | Avg   |
-|---------------------|-------|--------|---------|--------|------|-------|-------|
-| $\pi_0$+FAST | -     | -      | 96.4    | 96.8   | 88.6 | 60.2  | 85.5  |
-| OpenVLA-OFT | 175K  | 223    | 97.6    | 98.4   | 97.9 | 94.5  | 97.1  |
-| $\pi_0$             | -     | -      | 96.8    | 98.8   | 95.8 | 85.2  | 94.1  |
-| GR00T-N1.5 | 20K   | 203    | 92.0    | 92.0   | 86.0 | 76.0  | 86.5  |
-| **Qwen2.5-VL-FAST** | 30K   | 9.54   | 97.3    | 97.2   | 96.1 | 90.2  | 95.2  |
-| **Qwen2.5-VL-OFT**  | 30K   | 9.54   | 97.4    | 98.0   | 96.8 | 92.0  | 96.1  |
-| **Qwen2.5-VL-GR00T**| 30K   | 9.54   | 97.8    | 98.2   | 94.6 | 90.8  | 95.4  |
-| **Qwen3-VL-FAST**   | 30K   | 9.54   | 97.3    | 97.4   | 96.3 | 90.6  | 95.4  |
-| **Qwen3-VL-OFT**    | 30K   | 9.54   | 97.8    | 98.6   | 96.2 | 93.8  | 96.6  |
-| **Qwen3-VL-GR00T**  | 30K   | 9.54   | 97.8    | 98.8   | 97.4 | 92.0  | 96.5  |
+## 3. Evaluation
 
-We train one policy for all 4 suites. All
-scores are averaged over 500 trials for each task suite (10 tasks × 50 episodes).
-
----
-
-
-## 📦 1. Environment Setup
-
-To set up the environment, please first follow the official [LIBERO repository](https://github.com/Lifelong-Robot-Learning/LIBERO) to install the base `LIBERO` environment.  
-
-⚠️ **Common issue:** LIBERO defaults to Python 3.8, but the syntax updates between 3.8 and 3.10 are substantial. **We verified that using Python 3.10 avoids many issues**. 
-
-
-Afterwards, inside the `LIBERO` environment, install the following dependencies:  
+Set up the LIBERO simulator by following the [LIBERO repository](https://github.com/Lifelong-Robot-Learning/LIBERO).
+Python 3.10 avoids many issues. Then, inside the LIBERO environment:
 
 ```bash
 pip install tyro matplotlib mediapy websockets msgpack
 pip install numpy==1.24.4
 ```
 
----
+Run the following two commands from the repository root, each in its own terminal.
 
-## 🚀 2. Evaluation Workflow
-
-The evaluation should be run **from the repository root** using **two separate terminals**, one for each environment:  
-
-- **starVLA environment**: runs the inference server.  
-- **LIBERO environment**: runs the simulation.  
-
-### Step 1. Start the server (starVLA environment)
-
-In the first terminal, activate the `starVLA` conda environment and run:  
+**Terminal 1, StairVLA environment: policy server.**
 
 ```bash
+your_ckpt=./results/Checkpoints/libero_stairvla_stage2/checkpoints/steps_30000_pytorch_model.pt \
 bash examples/LIBERO/eval_files/run_policy_server.sh
 ```
 
-⚠️ **Note:** Please ensure that you specify the correct checkpoint path in `examples/LIBERO/eval_files/run_policy_server.sh`  
-
-
----
-
-### Step 2. Start the simulation (LIBERO environment)
-
-In the second terminal, activate the `LIBERO` conda environment and run:  
+**Terminal 2, LIBERO environment: all four suites, 50 trials per task.**
 
 ```bash
-bash examples/LIBERO/eval_files/eval_libero.sh
-```
-⚠️ **Note:** Please ensure that you specify the correct checkpoint path in `eval_libero.sh` to load action unnormalization stats. 
-
-Also ensure the environment variables at the top of `eval_libero.sh` are correctly set.
-
-Finally, each result will also save a video for visualization, as shown below:
-
-![Example](example.gif)
-
----
-
-
-# 🚀 LIBERO Training
-
-## 📦 Step 0: Download the training dataset
-Download the datasets to the playground/Datasets/LEROBOT_LIBERO_DATA directory:
-- [LIBERO-spatial](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_spatial_no_noops_1.0.0_lerobot)
-- [LIBERO-object](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_object_no_noops_1.0.0_lerobot)
-- [LIBERO-goal](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot)
-- [LIBERO-10](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot)
-
-And move `modality.json` to each `$LEROBOT_LIBERO_DATA/subset/meta/modality.json`.
-
-You could quickly prepare these by running:
-```bash
-# Set DEST to the directory where you want to store the data
-export DEST=/path/to/your/data/directory
-bash examples/LIBERO/data_preparation.sh
+export LIBERO_HOME=/path/to/LIBERO
+your_ckpt=./results/Checkpoints/libero_stairvla_stage2/checkpoints/steps_30000_pytorch_model.pt \
+bash examples/LIBERO/eval_files/eval_libero_all.sh
 ```
 
+`eval_libero_all.sh` reads the checkpoint path only to load the action normalization statistics,
+so pass the same `your_ckpt` to both scripts. It prints per-suite and overall success rates and
+writes `overall_summary.json` under `logs/`.
 
-## 🚀 Step1: Start Training
+### Server options
 
-Most of the required training files have been organized in [train_files](train_files).  
+`run_policy_server.sh` reads these environment variables:
 
-Please run the following command to start training:
+| Variable | Default | Meaning |
+|---|---|---|
+| `hier_eval_num_chunks` | 4 | M: refinement cycles per high-level trajectory |
+| `denoise_step_scale` | 0.97 | α: denoising progress at which the high-level trajectory is handed to the refiner |
+| `hier_eval_mode` | `default` | `top32` runs the high-level policy alone (the "Top-only" ablation) |
+| `context_denoise_step_scale`, `num_inference_timesteps`, `lower_refine_steps`, `lower_assumed_step_scale` | from checkpoint | further inference overrides; see `deployment/model_server/server_policy.py` |
+
+To measure per-chunk latency without the simulator:
 
 ```bash
-bash examples/LIBERO/train_files/run_libero_train.sh
+python scripts/benchmark_latency.py --ckpt <stage-2 checkpoint> --eval-num-chunks 4 --denoise-step-scale 0.97
 ```
-⚠️ **Note:** Please ensure that you specify the correct path in `examples/LIBERO/train_files/run_libero_train.sh`
-

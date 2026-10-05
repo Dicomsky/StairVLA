@@ -435,6 +435,83 @@ class SingleFrankaRobotiqDeltaEefDataConfig:
 
 ###########################################################################################
 
+class PiperXFruitV3EEDataConfig:
+    video_keys = [
+        "video.top",
+        "video.wrist",
+    ]
+    state_keys = [
+        "state.eef.x_m",
+        "state.eef.y_m",
+        "state.eef.z_m",
+        "state.eef.qx",
+        "state.eef.qy",
+        "state.eef.qz",
+        "state.eef.qw",
+        "state.gripper.pos_mm",
+    ]
+    action_keys = [
+        "action.eef.dx_m",
+        "action.eef.dy_m",
+        "action.eef.dz_m",
+        "action.eef.drx_rad",
+        "action.eef.dry_rad",
+        "action.eef.drz_rad",
+        "action.gripper.pos_mm",
+    ]
+    language_keys = ["annotation.human.action.task_description"]
+    observation_indices = [0]
+    action_indices = list(range(20))
+
+    def modality_config(self):
+        video_modality = ModalityConfig(
+            delta_indices=self.observation_indices,
+            modality_keys=self.video_keys,
+        )
+        state_modality = ModalityConfig(
+            delta_indices=self.observation_indices,
+            modality_keys=self.state_keys,
+        )
+        action_modality = ModalityConfig(
+            delta_indices=self.action_indices,
+            modality_keys=self.action_keys,
+        )
+        language_modality = ModalityConfig(
+            delta_indices=self.observation_indices,
+            modality_keys=self.language_keys,
+        )
+        modality_configs = {
+            "video": video_modality,
+            "state": state_modality,
+            "action": action_modality,
+            "language": language_modality,
+        }
+        return modality_configs
+
+    def transform(self):
+        transforms = [
+            StateActionToTensor(apply_to=self.state_keys),
+            StateActionTransform(
+                apply_to=self.state_keys,
+                normalization_modes={
+                    key: "q99"
+                    for key in self.state_keys
+                },
+            ),
+            StateActionToTensor(apply_to=self.action_keys),
+            StateActionTransform(
+                apply_to=self.action_keys,
+                normalization_modes={
+                    key: "q99"
+                    for key in self.action_keys
+                },
+            ),
+        ]
+
+        return ComposedModalityTransform(transforms=transforms)
+
+###########################################################################################
+
 class Libero4in1DataConfig:
     video_keys = [
         "video.primary_image",
@@ -598,6 +675,20 @@ class FourierGr1ArmsWaistDataConfig:
         "action.right_hand",
         "action.waist",
     ]
+    state_key_dims = {
+        "state.left_arm": 7,
+        "state.right_arm": 7,
+        "state.left_hand": 6,
+        "state.right_hand": 6,
+        "state.waist": 3,
+    }
+    action_key_dims = {
+        "action.left_arm": 7,
+        "action.right_arm": 7,
+        "action.left_hand": 6,
+        "action.right_hand": 6,
+        "action.waist": 3,
+    }
     language_keys = ["annotation.human.coarse_action"]
     observation_indices = [0]
     action_indices = list(range(16))
@@ -994,7 +1085,7 @@ ROBOT_TYPE_CONFIG_MAP = {
     "robotwin": AgilexDataConfig(),
     "robotwin50": AgilexData50Config(),
     "fourier_gr1_arms_waist": FourierGr1ArmsWaistDataConfig(),
+    "piperx_fruitv3_ee": PiperXFruitV3EEDataConfig(),
     
     "custom_robot_config": SingleFrankaRobotiqDeltaEefDataConfig(),
 }
-

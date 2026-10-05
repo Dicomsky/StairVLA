@@ -29,6 +29,7 @@ class ModelClient:
         use_ddim: bool = True,
         num_ddim_steps: int = 10,
         adaptive_ensemble_alpha = 0.1,
+        action_chunk_size_override: Optional[int] = None,
         host="0.0.0.0",
         port=10095,
     ) -> None:
@@ -60,7 +61,11 @@ class ModelClient:
         self.num_image_history = 0
 
         self.action_norm_stats = self.get_action_stats(self.unnorm_key, policy_ckpt_path=policy_ckpt_path)
-        self.action_chunk_size = self.get_action_chunk_size(policy_ckpt_path=policy_ckpt_path)
+        self.action_chunk_size = (
+            int(action_chunk_size_override)
+            if action_chunk_size_override is not None
+            else self.get_action_chunk_size(policy_ckpt_path=policy_ckpt_path)
+        )
         
 
     def _add_image_to_history(self, image: np.ndarray) -> None:
@@ -78,6 +83,10 @@ class ModelClient:
         self.gripper_action_repeat = 0
         self.sticky_gripper_action = 0.0
         self.previous_gripper_action = None
+        try:
+            self.client.reset({"task_description": task_description})
+        except Exception as e:
+            print(f"Warning: failed to reset remote policy state: {e}")
 
 
     def step(
@@ -137,12 +146,16 @@ class ModelClient:
         mask = action_norm_stats.get("mask", np.ones_like(action_norm_stats["min"], dtype=bool))
         action_high, action_low = np.array(action_norm_stats["max"]), np.array(action_norm_stats["min"])
         normalized_actions = np.clip(normalized_actions, -1, 1)
-        normalized_actions[:, 6] = np.where(normalized_actions[:, 6] < 0.5, 0, 1) 
+        signed_gripper = action_low[6] < -0.5 and action_high[6] > 0.5
+        if not signed_gripper:
+            normalized_actions[:, 6] = np.where(normalized_actions[:, 6] < 0.5, 0, 1)
         actions = np.where(
             mask,
             0.5 * (normalized_actions + 1) * (action_high - action_low) + action_low,
             normalized_actions,
         )
+        if signed_gripper:
+            actions[:, 6] = np.clip((1.0 - actions[:, 6]) * 0.5, 0.0, 1.0)
         
         return actions
 
@@ -160,7 +173,8 @@ class ModelClient:
     @staticmethod
     def get_action_chunk_size(policy_ckpt_path):
         model_config, _ = read_mode_config(policy_ckpt_path)  # read config and norm_stats
-        # import ipdb; ipdb.set_trace()
+        if model_config.get("framework", {}).get("name") == "HierarchicalVLA":
+            return model_config["framework"]["hierarchical_action_head"]["chunk_action_horizon"]
         return model_config['framework']['action_model']['future_action_window_size'] + 1
 
 

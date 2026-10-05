@@ -290,3 +290,115 @@ def read_mode_config(pretrained_checkpoint):
         overwatch.error(f"❌ Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
         raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
     return global_cfg, norm_stats
+def merge_framework_config(default_config_cls, cfg):
+    """
+    Merge a framework's default config (dataclass) with the incoming YAML config.
+
+    Rules:
+        - default_config_cls provides documented defaults for `cfg.framework`
+        - YAML values (cfg.framework) override matching defaults
+        - Extra YAML keys not in defaults are preserved (Config-as-API flexibility)
+        - Missing YAML keys fall back to defaults (less YAML boilerplate)
+
+    The merge only touches the `cfg.framework` sub-tree; datasets / trainer / etc.
+    are left untouched.
+
+    Args:
+        default_config_cls: A dataclass **class** (not instance) whose fields() define
+                            the default framework config with type hints and comments.
+        cfg: The full OmegaConf config (must contain cfg.framework).
+
+    Returns:
+        cfg: The same config object with cfg.framework replaced by the merged result.
+    """
+    import dataclasses
+
+    from omegaconf import DictConfig, OmegaConf
+
+    # 1. Instantiate defaults and convert to OmegaConf
+    defaults_instance = default_config_cls()
+    defaults_dict = dataclasses.asdict(defaults_instance)
+    defaults_omega = OmegaConf.create(defaults_dict)
+
+    # 2. Extract the YAML framework section
+    if hasattr(cfg, "framework"):
+        # Unwrap AccessTrackedConfig if needed
+        yaml_fw = cfg.framework
+        if hasattr(yaml_fw, "_cfg"):
+            yaml_fw = yaml_fw._cfg
+        if not isinstance(yaml_fw, DictConfig):
+            yaml_fw = OmegaConf.create(yaml_fw if isinstance(yaml_fw, dict) else {})
+    else:
+        yaml_fw = OmegaConf.create({})
+
+    # 3. Merge: defaults first, YAML overrides (YAML wins on conflicts)
+    merged_fw = OmegaConf.merge(defaults_omega, yaml_fw)
+
+    # 4. Write back into the original cfg
+    #    Handle both OmegaConf and AccessTrackedConfig transparently
+    if hasattr(cfg, "_cfg") and isinstance(cfg._cfg, DictConfig):
+        # AccessTrackedConfig caches child wrappers in _children dict.
+        # After replacing the underlying DictConfig node, the old child wrapper
+        # still points to the pre-merge node (stale data).  We must invalidate
+        # the cache so the next attribute access creates a fresh wrapper around
+        # the merged node.
+        #
+        # However, the old child's _local_accessed set records which keys were
+        # already read (e.g. "name" from build_framework).  Deleting the child
+        # would lose that tracking info, causing save_accessed_config to omit
+        # those keys from config.yaml.  So we preserve and restore it.
+        cfg._cfg.framework = merged_fw
+        if hasattr(cfg, "_children") and "framework" in cfg._children:
+            old_accessed = cfg._children["framework"]._local_accessed.copy()
+            del cfg._children["framework"]  # invalidate stale cache
+            new_child = cfg.framework  # re-create child around merged_fw
+            new_child._local_accessed.update(old_accessed)  # restore tracking
+    elif isinstance(cfg, DictConfig):
+        cfg.framework = merged_fw
+    else:
+        # Fallback — try direct attribute setting
+        try:
+            cfg.framework = merged_fw
+        except Exception:
+            overwatch.warning("Could not write merged framework config back to cfg.")
+
+    return cfg
+
+
+def populate_layerwise_dit_cfg(cfg, *, dit_hidden_dim: int, num_dit_layers: int):
+    """
+    Populate ``framework.action_model.diffusion_model_cfg`` with the DiT shape
+    fields required by ``LayerwiseFlowmatchingActionHead``.
+
+    Why this helper exists:
+        The action head is intentionally agnostic of the VLM backbone — it only
+        consumes ``diffusion_model_cfg``.  Each framework (QwenPI, QwenPI_v3,
+        ...) is responsible for deciding the DiT shape (depth + hidden) from
+        whatever source it likes (LLM hidden, a compressed projector dim, ...)
+        and writing it here BEFORE calling ``get_action_model``.
+
+    Fields written (override any stale YAML values):
+        - num_layers           = num_dit_layers
+        - input_embedding_dim  = dit_hidden_dim
+        - cross_attention_dim  = dit_hidden_dim   (encoder is pre-projected)
+        - num_attention_heads  = dit_hidden_dim // attention_head_dim
+                                 (uses existing attention_head_dim if set, else 64)
+
+    Args:
+        cfg: Full OmegaConf config.
+        dit_hidden_dim: DiT internal hidden dim.
+        num_dit_layers: Number of DiT cross-attention layers.
+
+    Returns:
+        The (mutated) diffusion_model_cfg node.
+    """
+    dit_cfg = cfg.framework.action_model.diffusion_model_cfg
+    head_dim = dit_cfg.get("attention_head_dim", None) or 64
+    dit_cfg.attention_head_dim = head_dim
+    dit_cfg.num_layers = int(num_dit_layers)
+    dit_cfg.input_embedding_dim = int(dit_hidden_dim)
+    dit_cfg.cross_attention_dim = int(dit_hidden_dim)
+    dit_cfg.num_attention_heads = int(dit_hidden_dim) // int(head_dim)
+    return dit_cfg
+
+

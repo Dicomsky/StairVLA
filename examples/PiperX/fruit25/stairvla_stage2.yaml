@@ -1,0 +1,210 @@
+run_id: fruit25_stairvla_stage2
+run_root_dir: ./results/Checkpoints
+seed: 42
+trackers: [jsonl, wandb]
+wandb_entity: null  # set to your W&B entity
+wandb_project: StairVLA
+is_debug: false
+
+framework:
+  name: HierarchicalVLA
+  top_policy:
+    name: QwenGR00T
+  qwenvl:
+    base_vlm: ./playground/Pretrained_models/Qwen3-VL-2B-Instruct
+    attn_implementation: sdpa
+    vl_hidden_dim: 2048
+  action_model:
+    action_model_type: DiT-B
+    action_hidden_dim: 1024
+    hidden_size: 1024
+    add_pos_embed: true
+    max_seq_len: 1024
+    action_dim: 7
+    state_dim: 8
+    future_action_window_size: 31
+    action_horizon: 32
+    action_indices: [
+      0, 1, 2, 3, 4, 5, 6, 7,
+      8, 9, 10, 11, 12, 13, 14, 15,
+      16, 17, 18, 19, 20, 21, 22, 23,
+      24, 25, 26, 27, 28, 29, 30, 31
+    ]
+    past_action_window_size: 0
+    repeated_diffusion_steps: 8
+    noise_beta_alpha: 1.5
+    noise_beta_beta: 1.0
+    noise_s: 0.999
+    num_timestep_buckets: 1000
+    num_inference_timesteps: 1
+    num_target_vision_tokens: 32
+    diffusion_model_cfg:
+      cross_attention_dim: 2048
+      dropout: 0.2
+      final_dropout: true
+      interleave_self_attention: true
+      norm_type: "ada_norm"
+      num_layers: 16
+      output_dim: 1024
+      positional_embeddings: null
+  hierarchical_action_head:
+    hidden_dim: 768
+    dense_action_horizon: 32
+    chunk_action_horizon: 8
+    num_refine_chunks: 4
+    downsample_factor: 1
+    num_top_latent_tokens: 8
+    temporal_context_extra: 5
+    temporal_shift_enabled: false
+    temporal_shift_schedule: [0, 0, 0, 0]
+    coarse_plan_tail_steps: 1
+    coarse_plan_tail_mode: linear_decay
+    coarse_plan_tail_decay: 0.5
+    top_plan_step_scale_enabled: true
+    top_plan_step_scale_min: 0.6
+    top_plan_step_scale_max: 1.0
+    lower_flow_path_mix_enabled: true
+    lower_flow_path_mix_min_scale: 0.8
+    lower_flow_path_mix_max_scale: 1.0
+    context_top_plan_step_scale_enabled: true
+    context_top_plan_step_scale_min: 1.0
+    context_top_plan_step_scale_max: 1.0
+    eval_num_chunks: 4
+    use_sincos_temporal_pos: true
+    debug_print: false
+    debug_max_prints: 0
+    realtime_obs_encoder: siglip
+    realtime_obs_siglip_model_id: google/siglip-base-patch16-224
+    realtime_obs_siglip_freeze: false
+    realtime_obs_siglip_interpolate_pos_encoding: true
+    realtime_obs_siglip_dtype: bf16
+    realtime_obs_size: 256
+    realtime_obs_channels: 128
+    realtime_obs_token_grid: 16
+    num_heads: 12
+    num_layers: 16
+    feedforward_dim: 3072
+    dropout: 0.2
+    top_loss_weight: 1.0
+    refine_loss_weight: 1.0
+    loss_weight: 1.0
+    refine_arch: dit
+    refine_prediction_type: flow_velocity
+    lower_init_from_top_action_head: true
+    # Flow-matching velocity target anchored at the high-level plan,
+    # (target - coarse) / (1 - base_scale). Equal to (target - x_t) / (1 - t) on the
+    # straight path, but stays well conditioned as t -> 1.
+    lower_velocity_target_from_upstream: true
+    # Legacy x_t-anchored denominator clamp; unused while the flag above is true.
+    lower_flow_min_step_size: 0.05
+    lower_num_timestep_buckets: 1000
+    lower_dit_attention_head_dim: 64
+    lower_dit_output_dim: 1024
+    lower_dit_use_top_decoder_head: true
+    lower_dit_decoder_hidden_dim: 1024
+    lower_dit_add_pos_embed: true
+    lower_dit_interleave_self_attention: true
+    lower_dit_final_dropout: true
+    residual_correction_enabled: false
+    residual_constraint_type: soft
+    residual_bound_penalty_weight: 0.0
+    residual_eval_clip: false
+    residual_max: [0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.5]
+    future_context_residual_loss_weight: 0.0
+    future_context_residual_loss_unmasked_only: true
+    coarse_plan_noise_std: 0.0
+    coarse_plan_noise_type: none
+    coarse_plan_mask_ratio: 0.
+    coarse_plan_mix_enabled: false
+    coarse_plan_mix_alpha_min: 0.0
+    coarse_plan_mix_alpha_max: 0.0
+
+datasets:
+  vlm_data:
+    dataset_py: vlm_datasets
+    dataformat: llava_json
+    dataset_use: sharegpt4v_coco
+    eval_dataset: sharegpt4v_coco
+    data_flatten: false
+    base_interval: 2
+    max_pixels: 307200
+    min_pixels: 784
+    model_max_length: 2048
+    model_type: qwen3vl
+    per_device_batch_size: 4
+
+  vla_data:
+    dataset_py: lerobot_datasets
+    data_root_dir: playground/Datasets
+    data_mix: fruit25
+    lerobot_version: v3.0
+    action_type: eef_delta
+    action_mode: abs
+    action_statistics_modes: [abs]
+    sequential_step_sampling: false
+    CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
+    CoT_answer: bbox
+    default_image_resolution: [3, 224, 224]
+    image_size: [224, 224]
+    per_device_batch_size: 16
+    load_all_data_for_training: true
+    include_state: false
+    export_observation_anchors: true
+    obs: ["image_0", "image_1"]
+    video_backend: torchvision_av
+    # The refiner decodes one frame per chunk per camera, so more loader workers are needed
+    # than for the high-level policy to keep the GPUs fed.
+    num_workers: 16
+    # MUST equal the chunk start offsets, arange(num_refine_chunks) * chunk_action_horizon.
+    # The refiner selects its observation anchor positionally by chunk index, and nothing
+    # validates the correspondence.
+    observation_indices: [0, 8, 16, 24]
+    # Unused while include_state is false; kept equal to observation_indices.
+    state_indices: [0, 8, 16, 24]
+    action_indices: [
+      0, 1, 2, 3, 4, 5, 6, 7,
+      8, 9, 10, 11, 12, 13, 14, 15,
+      16, 17, 18, 19, 20, 21, 22, 23,
+      24, 25, 26, 27, 28, 29, 30, 31
+    ]
+
+trainer:
+  epochs: 100
+  max_train_steps: 30000
+  num_warmup_steps: 1000
+  save_interval: 5000
+  keep_last_n: 3
+  eval_interval: 500
+  learning_rate:
+    base: 1.0e-05
+    qwen_vl_interface: 0.0
+    action_model: 0.0
+    hierarchical_action_head: 1.0e-04
+  lr_scheduler_type: cosine_with_min_lr
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-06
+  freeze_modules: "qwen_vl_interface,action_model"
+  pretrained_checkpoint: ./results/Checkpoints/fruit25_stairvla_stage1/checkpoints/steps_30000_pytorch_model.pt
+  reload_modules: "qwen_vl_interface,action_model"
+  loss_scale:
+    vla: 1.0
+    vlm: 0.0
+  max_grad_norm: 1.0
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  logging_frequency: 50
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 1
+
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-08
+    weight_decay: 0.01
+
+  save_format: pt
+  is_resume: false
+  resume_epoch: null
+  resume_step: null
+  enable_gradient_checkpointing: true
+  enable_mixed_precision_training: true

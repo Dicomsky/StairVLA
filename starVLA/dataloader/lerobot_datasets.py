@@ -16,6 +16,60 @@ from starVLA.dataloader.gr00t_lerobot.embodiment_tags import ROBOT_TYPE_TO_EMBOD
 def collate_fn(batch):
     return batch
 
+
+def _normalize_index_override(value):
+    """Normalize yaml-provided delta index overrides into a plain int list.
+
+    Supported forms:
+      - list / tuple / OmegaConf ListConfig
+      - comma-separated string, e.g. "0,8,16"
+      - Python range-like string is intentionally not supported to keep parsing explicit
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        items = [item.strip() for item in value.split(",") if item.strip()]
+        return [int(item) for item in items]
+
+    return [int(item) for item in value]
+
+
+def _apply_delta_index_overrides(modality_config: dict, data_cfg: dict | None) -> dict:
+    """Apply optional yaml delta-index overrides without changing defaults.
+
+    This is intentionally additive:
+      - if no override is provided, the original robot config stays untouched
+      - overrides only affect the current run
+
+    Supported keys in cfg.datasets.vla_data:
+      - observation_indices: used for video + language modalities
+      - state_indices: used for state modality
+      - action_indices: used for action modality
+    """
+    if data_cfg is None:
+        return modality_config
+
+    observation_indices = _normalize_index_override(data_cfg.get("observation_indices", None))
+    state_indices = _normalize_index_override(data_cfg.get("state_indices", None))
+    action_indices = _normalize_index_override(data_cfg.get("action_indices", None))
+
+    if observation_indices is None and state_indices is None and action_indices is None:
+        return modality_config
+
+    if observation_indices is not None:
+        for modality_name in ("video", "language"):
+            if modality_name in modality_config:
+                modality_config[modality_name].delta_indices = observation_indices
+
+    if state_indices is not None and "state" in modality_config:
+        modality_config["state"].delta_indices = state_indices
+
+    if action_indices is not None and "action" in modality_config:
+        modality_config["action"].delta_indices = action_indices
+
+    return modality_config
+
 def make_LeRobotSingleDataset(
     data_root_dir: Path | str,
     data_name: str,
@@ -35,6 +89,7 @@ def make_LeRobotSingleDataset(
     
     data_config = ROBOT_TYPE_CONFIG_MAP[robot_type]
     modality_config = data_config.modality_config()
+    modality_config = _apply_delta_index_overrides(modality_config=modality_config, data_cfg=data_cfg)
     transforms = data_config.transform()
     dataset_path = data_root_dir / data_name
     if robot_type not in ROBOT_TYPE_TO_EMBODIMENT_TAG:
@@ -106,7 +161,7 @@ if __name__ == "__main__":
     # debugpy.listen(("0.0.0.0", 10092))
     # print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     # debugpy.wait_for_client()
-    args.config_yaml = "./examples/MultiRobot/train_files/starvla_cotrain_multiRobot.yaml"
+    # args.config_yaml = "./examples/MultiRobot/train_files/starvla_cotrain_multiRobot.yaml"
     cfg = OmegaConf.load(args.config_yaml)
     # cfg.datasets.vla_data.data_mix = "robotwin"
     vla_dataset_cfg = cfg.datasets.vla_data
