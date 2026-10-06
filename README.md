@@ -195,9 +195,11 @@ The server defaults follow the paper (α=0.97, M=4). To evaluate the high-level 
 
 ## Real-robot deployment and teleoperation
 
-<!-- TODO: robot client and teleoperation code -->
-The PiperX robot client and the teleoperation setup used to collect the real-robot datasets will
-be released under [`examples/PiperX/`](examples/PiperX/README.md). TODO.
+The PiperX code lives in [`examples/PiperX/`](examples/PiperX/README.md):
+
+- [robot client and benchmark](examples/PiperX/deployment/README.md)
+- [VR teleoperation and data collection](examples/PiperX/teleoperation/README.md)
+- [dataset processing](examples/PiperX/dataset_tools/README.md)
 
 ## Checkpoints and datasets
 

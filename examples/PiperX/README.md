@@ -66,11 +66,31 @@ the control loop requests a new chunk and executes it at the task's control rate
 
 ## 4. Robot client
 
-The PiperX control client (camera capture, inverse kinematics, safety limits, websocket client)
-will be added under [`deployment/`](deployment/). TODO.
+[`deployment/`](deployment/README.md) holds the robot client that connects the policy server to the
+PiperX. It captures both cameras, sends the 8D EE state, integrates each predicted delta-EE chunk and
+converts it to joint targets with local IK under the paper's safety limits (≤0.05 m and ≤0.20 rad
+per step, ≤25°/s per joint). The folder also has the 25-task Fruit25 benchmark
+([BENCHMARK.md](deployment/BENCHMARK.md)), episode replay and offline action validation.
+
+```bash
+python examples/PiperX/deployment/eval_policy.py --checkpoint <stage-2 run dir> --port 5694           # dry run
+python examples/PiperX/deployment/eval_policy.py --checkpoint <stage-2 run dir> --port 5694 --execute
+```
+
+Use `--control-hz 20` for PushBlock.
 
 ## 5. Teleoperation and data collection
 
-The teleoperation setup used to collect the real-robot demonstrations (Fruit25 was
-collected with VR teleoperation) will be added under
-[`teleoperation/`](teleoperation/). TODO.
+The demonstrations were collected with a Meta Quest through WebXR:
+[`teleoperation/`](teleoperation/README.md). Recordings are raw 30 Hz joint-space LeRobot datasets.
+[`dataset_tools/`](dataset_tools/README.md) converts them into the EE-delta training datasets.
+It computes temporal EE deltas, resamples to 8 Hz or 20 Hz, excludes episodes listed in a reviewed
+manifest, and runs quality checks.
+
+```
+record.py (VR, 30 Hz joints) → convert_to_ee.py → resample.py (--fps 8 | 20, --exclusions) → prepare_modality.py → training
+```
+
+The robot-side extras (`piper_sdk`, `pyrealsense2`, `opencv-python`) are listed in
+[`requirements.txt`](requirements.txt). Code shared by all three folders (IK, the bundled URDF, the
+CAN/camera driver) is in [`common/`](common/).

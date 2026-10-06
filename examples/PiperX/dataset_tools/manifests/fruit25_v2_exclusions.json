@@ -1,0 +1,6 @@
+{
+  "description": "Fruit25 (FruitV3_EE_8Hz_temporal_clean_v2): episodes of the FruitV3 recording that are not in the release. Ranges are half-open [start, end): [600, 700] drops source episodes 600..699. Ids are FruitV3 / FruitV3_EE_temporal_30Hz_work episode_index values.",
+  "exclude_ranges": [[600, 700]],
+  "exclude_episodes": [345, 396, 397, 399, 466, 468, 547, 692, 798, 799, 857, 898, 1112, 1113, 1114, 1115, 1116, 1118, 1119, 1137, 1139, 1142, 1158, 1159, 1161, 1162, 1181, 1190, 1200, 1202, 1203, 1205, 1206, 1207, 1208],
+  "include_tasks": []
+}

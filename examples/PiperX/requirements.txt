@@ -1,0 +1,7 @@
+# Extra packages for the PiperX real-robot code (deployment/, teleoperation/, dataset_tools/),
+# installed on top of the StairVLA environment: pip install -r examples/PiperX/requirements.txt
+piper_sdk>=0.6.1        # AgileX Piper / PiperX CAN interface
+pyrealsense2            # wrist camera (Intel RealSense)
+opencv-python           # top camera (UVC) and video tools
+websockets>=13          # policy client and the VR teleoperation server
+pandas

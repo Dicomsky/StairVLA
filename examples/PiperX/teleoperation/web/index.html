@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PiperX VR Teleoperation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <div>
+          <h1>PiperX VR Teleoperation</h1>
+          <p class="subtitle">StairVLA data collection</p>
+        </div>
+        <span id="connection" class="pill pill-off">Connecting…</span>
+      </header>
+
+      <section class="card status-card" id="statusCard">
+        <div class="status-top">
+          <span id="phase" class="phase phase-idle">—</span>
+          <span id="timer" class="timer"></span>
+        </div>
+        <div id="hint" class="hint">Waiting for the robot…</div>
+        <div class="status-grid">
+          <div><span class="label">Episode</span><span id="episode">—</span></div>
+          <div><span class="label">Saved</span><span id="saved">—</span></div>
+          <div class="wide"><span class="label">Task</span><span id="task">—</span></div>
+        </div>
+        <div class="flags">
+          <span id="flagTracking" class="flag">Controller</span>
+          <span id="flagDeadman" class="flag">Grip</span>
+          <span id="flagGripper" class="flag">Gripper</span>
+          <span id="flagIk" class="flag">IK</span>
+        </div>
+        <div id="message" class="message"></div>
+      </section>
+
+      <button id="enterXr" class="enter-xr" disabled>Enter VR</button>
+      <p id="xrNote" class="note"></p>
+
+      <section class="card">
+        <h2>Controls</h2>
+        <table class="controls">
+          <tr><th>Right grip (hold)</th><td>Move the arm. Release to re-position your hand ("clutch").</td></tr>
+          <tr><th>Right trigger</th><td>Close the gripper while held.</td></tr>
+          <tr><th>Right A</th><td>Next step: move home → start recording → save episode.</td></tr>
+          <tr><th>Right B</th><td>Discard the episode being recorded.</td></tr>
+          <tr><th>Left Y</th><td>Slowly move the arm to the home pose.</td></tr>
+          <tr><th>Left X</th><td>Point the right controller toward robot +X (forward) and press to align the frame.</td></tr>
+          <tr><th>Left stick click</th><td>Show / hide the button labels in the headset.</td></tr>
+        </table>
+        <p class="note">Keyboard on the robot PC: <kbd>Space</kbd>/<kbd>→</kbd> = A, <kbd>Backspace</kbd>/<kbd>←</kbd> = B, <kbd>h</kbd> = home, <kbd>q</kbd>/<kbd>Esc</kbd> = quit.</p>
+      </section>
+    </main>
+
+    <a-scene id="scene" embedded vr-mode-ui="enabled: false" renderer="colorManagement: true"
+             webxr="optionalFeatures: local-floor">
+      <a-entity id="head" camera look-controls="enabled: false" wasd-controls="enabled: false">
+        <!-- Heads-up panel: slightly below eye level so it does not cover the workspace. -->
+        <a-entity id="hud" position="0 -0.2 -0.75" rotation="-12 0 0" visible="false">
+          <a-plane width="0.62" height="0.24" color="#11161c" opacity="0.78" material="shader: flat; transparent: true"></a-plane>
+          <a-plane id="hudPhaseBg" position="-0.215 0.083 0.001" width="0.17" height="0.048" color="#3b4754" material="shader: flat"></a-plane>
+          <a-text id="hudPhase" value="IDLE" position="-0.215 0.083 0.002" align="center" width="0.55" color="#ffffff"></a-text>
+          <a-circle id="hudRec" position="0.27 0.083 0.002" radius="0.012" color="#ff3b30" material="shader: flat" visible="false"></a-circle>
+          <a-text id="hudInfo" value="" position="0.235 0.083 0.002" align="right" width="0.5" color="#c9d1d9"></a-text>
+          <a-text id="hudHint" value="Connecting..." position="-0.29 0.02 0.002" align="left" width="0.82" color="#ffffff" wrap-count="34"></a-text>
+          <a-text id="hudTask" value="" position="-0.29 -0.05 0.002" align="left" width="0.5" color="#8b98a5" wrap-count="52"></a-text>
+          <a-text id="hudWarn" value="" position="-0.29 -0.095 0.002" align="left" width="0.5" color="#ffb020"></a-text>
+        </a-entity>
+      </a-entity>
+
+      <a-entity id="leftHand" oculus-touch-controls="hand: left">
+        <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
+          <a-text value="Y  home" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text value="X  align forward" position="0 0 0" align="center" width="0.14" color="#ffffff"></a-text>
+        </a-entity>
+      </a-entity>
+      <a-entity id="rightHand" oculus-touch-controls="hand: right">
+        <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
+          <a-text id="labelA" value="A  move home" position="0 0.032 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text value="B  discard" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text value="grip: move   trigger: gripper" position="0 0 0" align="center" width="0.14" color="#8b98a5"></a-text>
+        </a-entity>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
