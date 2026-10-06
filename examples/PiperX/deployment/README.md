@@ -39,6 +39,7 @@ python deployment/model_server/server_policy.py \
     --port 10093 --use_bf16 --idle_timeout -1 \
     --hier_eval_num_chunks 3 \
     --denoise_step_scale 0.97 \
+    --context_denoise_step_scale 0.9 \
     --num_inference_timesteps 2 \
     --lower_refine_steps 1 \
     --lower_assumed_step_scale 0.97
@@ -70,7 +71,7 @@ for `--trial-duration-s`), then label it `s`/`f`/`m` (or `q` to quit). Results a
 | Task | Flags |
 |---|---|
 | Fruit25 | defaults (8 Hz, binary gripper threshold 80.6 mm, close 0 mm / open 100 mm) |
-| PushBlock | `--control-hz 20 --gripper-binary-threshold 47.35 --gripper-close-mm 0.3` |
+| PushBlock | `--control-hz 20 --gripper-action-mode absolute` (gripper target used as predicted, clipped to 0–100 mm) |
 
 `--control-hz` must match the rate of the training data (8 Hz for Fruit25, 20 Hz for PushBlock).
 

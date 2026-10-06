@@ -55,6 +55,8 @@ SUITE_PRESETS = {
         },
     },
     "pushblock": {
+        # Binary gripper split derived from the dataset for the demo videos. The paper's PushBlock
+        # benchmark used --gripper-action-mode absolute (open 100 mm / close 0 mm) instead.
         "tasks": ["Push the black block into the blue square target at the center."],
         "control_hz": 20.0,
         "gripper_action_mode": "binary",

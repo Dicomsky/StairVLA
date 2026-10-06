@@ -22,7 +22,7 @@ echo '["Push the black block into the blue square target at the center."]' > pus
 python examples/PiperX/deployment/eval_benchmark.py \
     --checkpoint results/Checkpoints/pushblock_stairvla_stage2 \
     --run-name pushblock_stairvla --tasks-json pushblock_tasks.json \
-    --control-hz 20 --gripper-binary-threshold 47.35 --gripper-close-mm 0.3 \
+    --control-hz 20 --gripper-action-mode absolute \
     --port 10093 --execute
 ```
 

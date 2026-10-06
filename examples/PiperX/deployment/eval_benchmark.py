@@ -1022,7 +1022,7 @@ def build_argparser() -> argparse.ArgumentParser:
     parser.description = "Run the resumable PiperX real-robot benchmark (built-in: the 25 Fruit25 tasks)."
     parser.epilog = (
         "Defaults force the paper's Fruit25 protocol (8 Hz). For PushBlock pass "
-        "--tasks-json <one-task list> --control-hz 20 and its gripper settings (see README.md)."
+        "--tasks-json <one-task list> --control-hz 20 --gripper-action-mode absolute (paper settings)."
     )
     parser.set_defaults(
         action_space="delta-ee",

@@ -47,7 +47,8 @@ The configs use `attn_implementation: sdpa`, so flash-attn is not required for t
 
 Serve a stage-2 checkpoint with the inference settings used in the paper:
 
-- **High level:** denoising progress α=0.97 with 2 inference steps.
+- **High level:** denoising progress α=0.97 with 2 inference steps; action-context denoising scale 0.9
+  (`--context_denoise_step_scale`).
 - **Refiner:** 1 refinement step from an assumed progress of 0.97.
 - **Reuse:** M=3 refinement cycles per high-level trajectory (24 executed actions).
 
@@ -56,6 +57,7 @@ python deployment/model_server/server_policy.py \
     --ckpt_path <stage-2 checkpoint> --port 5694 --use_bf16 \
     --hier_eval_num_chunks 3 \
     --denoise_step_scale 0.97 \
+    --context_denoise_step_scale 0.9 \
     --num_inference_timesteps 2 \
     --lower_refine_steps 1 \
     --lower_assumed_step_scale 0.97

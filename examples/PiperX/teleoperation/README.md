@@ -100,7 +100,7 @@ recomputes the actions from consecutive measured states (temporal EE deltas).
 | `vr_mapping.py` | VR-to-robot frame mapping, filtering and speed limits |
 | `vr_server.py` | HTTPS + WebSocket server for the headset page |
 | `dataset_writer.py` | LeRobot v3.0 dataset writer (streams video while recording) |
-| `web/` | WebXR page (A-Frame): status panel, button labels, haptics |
+| `web/` | WebXR page (A-Frame, vendored in `web/vendor/`): status panel, button labels, haptics |
 
 The shared IK, URDF and robot driver live in [`../common/`](../common). See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution.
@@ -108,7 +108,8 @@ The shared IK, URDF and robot driver live in [`../common/`](../common). See
 ## Troubleshooting
 
 - **The page loads but "Enter VR" is disabled:** open it in the Quest browser itself, not a casting
-  view. The page also loads A-Frame from `aframe.io`, so the headset needs internet access.
+  view. All page assets (A-Frame, font) are bundled in `web/vendor/`, so only the LAN connection to
+  the robot PC is needed.
 - **"Disconnected" on the page:** the robot PC firewall must allow TCP 8443.
 - **The arm does not move:** you must hold the right grip. Check that the status panel says
   *Ready* or *Recording* and not *Homing*.

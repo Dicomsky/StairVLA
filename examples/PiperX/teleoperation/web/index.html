@@ -5,7 +5,7 @@
     <title>PiperX VR Teleoperation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="vendor/aframe.min.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -63,26 +63,32 @@
         <a-entity id="hud" position="0 -0.2 -0.75" rotation="-12 0 0" visible="false">
           <a-plane width="0.62" height="0.24" color="#11161c" opacity="0.78" material="shader: flat; transparent: true"></a-plane>
           <a-plane id="hudPhaseBg" position="-0.215 0.083 0.001" width="0.17" height="0.048" color="#3b4754" material="shader: flat"></a-plane>
-          <a-text id="hudPhase" value="IDLE" position="-0.215 0.083 0.002" align="center" width="0.55" color="#ffffff"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudPhase" value="IDLE" position="-0.215 0.083 0.002" align="center" width="0.55" color="#ffffff"></a-text>
           <a-circle id="hudRec" position="0.27 0.083 0.002" radius="0.012" color="#ff3b30" material="shader: flat" visible="false"></a-circle>
-          <a-text id="hudInfo" value="" position="0.235 0.083 0.002" align="right" width="0.5" color="#c9d1d9"></a-text>
-          <a-text id="hudHint" value="Connecting..." position="-0.29 0.02 0.002" align="left" width="0.82" color="#ffffff" wrap-count="34"></a-text>
-          <a-text id="hudTask" value="" position="-0.29 -0.05 0.002" align="left" width="0.5" color="#8b98a5" wrap-count="52"></a-text>
-          <a-text id="hudWarn" value="" position="-0.29 -0.095 0.002" align="left" width="0.5" color="#ffb020"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudInfo" value="" position="0.235 0.083 0.002" align="right" width="0.5" color="#c9d1d9"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudHint" value="Connecting..." position="-0.29 0.02 0.002" align="left" width="0.82" color="#ffffff" wrap-count="34"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudTask" value="" position="-0.29 -0.05 0.002" align="left" width="0.5" color="#8b98a5" wrap-count="52"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudWarn" value="" position="-0.29 -0.095 0.002" align="left" width="0.5" color="#ffb020"></a-text>
         </a-entity>
       </a-entity>
 
-      <a-entity id="leftHand" oculus-touch-controls="hand: left">
+      <a-entity id="leftHand" oculus-touch-controls="hand: left; model: false">
+        <!-- Local marker instead of the controller model (no CDN download): forward axis in blue. -->
+        <a-box width="0.025" height="0.015" depth="0.04" color="#c9d1d9" material="shader: flat"></a-box>
+        <a-cylinder position="0 0 -0.05" rotation="90 0 0" height="0.06" radius="0.002" color="#1f6feb" material="shader: flat"></a-cylinder>
         <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
-          <a-text value="Y  home" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text value="X  align forward" position="0 0 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="Y  home" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="X  align forward" position="0 0 0" align="center" width="0.14" color="#ffffff"></a-text>
         </a-entity>
       </a-entity>
-      <a-entity id="rightHand" oculus-touch-controls="hand: right">
+      <a-entity id="rightHand" oculus-touch-controls="hand: right; model: false">
+        <!-- Local marker instead of the controller model (no CDN download): forward axis in blue. -->
+        <a-box width="0.025" height="0.015" depth="0.04" color="#c9d1d9" material="shader: flat"></a-box>
+        <a-cylinder position="0 0 -0.05" rotation="90 0 0" height="0.06" radius="0.002" color="#1f6feb" material="shader: flat"></a-cylinder>
         <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
-          <a-text id="labelA" value="A  move home" position="0 0.032 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text value="B  discard" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text value="grip: move   trigger: gripper" position="0 0 0" align="center" width="0.14" color="#8b98a5"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="labelA" value="A  move home" position="0 0.032 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="B  discard" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
+          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="grip: move   trigger: gripper" position="0 0 0" align="center" width="0.14" color="#8b98a5"></a-text>
         </a-entity>
       </a-entity>
     </a-scene>

@@ -962,7 +962,7 @@ def build_argparser() -> argparse.ArgumentParser:
         description="Run a StairVLA policy on a real AgileX PiperX arm (dry run unless --execute).",
         epilog=(
             "Defaults are the paper's Fruit25 settings (8 Hz). For PushBlock pass --control-hz 20 "
-            "(and its gripper settings, see examples/PiperX/deployment/README.md)."
+            "--gripper-action-mode absolute (paper settings; see examples/PiperX/deployment/README.md)."
         ),
     )
     parser.add_argument("--host", default="127.0.0.1", help="StairVLA policy server host.")
