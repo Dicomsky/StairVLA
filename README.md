@@ -110,14 +110,42 @@ cd StairVLA
 conda create -n stairvla python=3.10 -y
 conda activate stairvla
 pip install -r requirements.txt
-pip install flash-attn --no-build-isolation   # 2.7.4.post1 is known to work with CUDA 12.0 / 12.4
 pip install -e .
+pip install flash-attn==2.7.4.post1 --no-build-isolation
 ```
 
-Download the VLM backbones into `playground/Pretrained_models/`:
-[Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct) (LIBERO, LIBERO-Plus) and
-[Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct) (real robot). The refiner's
-SigLIP encoder (`google/siglip-base-patch16-224`) is fetched from the Hugging Face Hub on first use.
+To get later updates, run `git pull` inside the repository.
+
+We used PyTorch 2.6.0 (CUDA 12.4) with flash-attn 2.7.4.post1. flash-attn must match your CUDA
+toolkit and PyTorch build; if it fails to install, check `nvcc -V` and
+`pip list | grep -E 'torch|flash-attn'` and pick a matching flash-attn release.
+
+<details>
+<summary><b>No flash-attn, or Blackwell GPUs (RTX 50-series, RTX PRO 6000 Blackwell)</b></summary>
+
+PyTorch 2.6 has no kernels for Blackwell GPUs (compute capability sm_120), and flash-attn has no
+sm_120 build. Install the CUDA 12.8 build of PyTorch after `requirements.txt`, skip flash-attn,
+and use PyTorch's SDPA attention instead:
+
+```bash
+pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
+```
+
+Then set `framework.qwenvl.attn_implementation: sdpa` in the YAML you train with (the PiperX
+configs already do). DeepSpeed calls `nvcc` when it loads, so make sure `CUDA_HOME` points to a
+CUDA 12.8 or newer toolkit.
+
+</details>
+
+Download the VLM backbones into `playground/Pretrained_models/`. The refiner's SigLIP encoder
+(`google/siglip-base-patch16-224`) is fetched from the Hugging Face Hub on first use.
+
+```bash
+# LIBERO and LIBERO-Plus
+hf download Qwen/Qwen3-VL-4B-Instruct --local-dir playground/Pretrained_models/Qwen3-VL-4B-Instruct
+# PiperX real robot
+hf download Qwen/Qwen3-VL-2B-Instruct --local-dir playground/Pretrained_models/Qwen3-VL-2B-Instruct
+```
 
 ## Training
 

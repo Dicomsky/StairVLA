@@ -37,13 +37,23 @@ All launchers use 8 GPUs and are run from the repository root. Stage 2 loads
 
 ## 3. Evaluation
 
-Set up the LIBERO simulator by following the [LIBERO repository](https://github.com/Lifelong-Robot-Learning/LIBERO).
-Python 3.10 avoids many issues. Then, inside the LIBERO environment:
+The simulator runs in its own environment. Install [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)
+in a separate folder, outside this repository:
 
 ```bash
+conda create -n libero python=3.10 -y
+conda activate libero
+git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
+cd LIBERO
+pip install -r requirements.txt
+pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
 pip install tyro matplotlib mediapy websockets msgpack
 pip install numpy==1.24.4
+pip install -e .
 ```
+
+Python 3.10 avoids many issues with LIBERO's default Python 3.8. Set `LIBERO_HOME` to this LIBERO
+folder when you run the evaluation below.
 
 Run the following two commands from the repository root, each in its own terminal.
 
