@@ -14,8 +14,9 @@ Shangyuan Yuan<sup>1</sup>, Xinda Qi<sup>1,2</sup>, Yujiang Pu<sup>1</sup>, Wenl
 
 > **Built on [StarVLA](https://github.com/starVLA/starVLA).** Most of this repository (training
 > loop, data loading, VLM interface, baseline frameworks, and the policy server) comes from
-> StarVLA. Our contribution is the stage-aware hierarchical framework and its configurations,
-> listed in [What StairVLA adds](#what-stairvla-adds). See [NOTICE](NOTICE) for file-level provenance.
+> StarVLA. Our contribution is the stage-aware hierarchical framework
+> (`HierarchicalVLA.py`, `Hierarchical_ActionHead.py`) and its configurations. See [NOTICE](NOTICE)
+> for file-level provenance.
 
 <p align="center">
   <img src="assets/framework.png" width="95%" alt="StairVLA framework">
@@ -100,44 +101,6 @@ PushBlock is one continuous pushing task (10 trials per method).
   <img src="assets/real_world_results.png" width="70%" alt="Real-world results">
 </p>
 
-## What StairVLA adds
-
-| File | Role |
-|---|---|
-| [`starVLA/model/framework/HierarchicalVLA.py`](starVLA/model/framework/HierarchicalVLA.py) | High-level policy, partial-denoising trajectory construction, flow-matching velocity target, chunk batching, and hierarchical inference with trajectory reuse. |
-| [`starVLA/model/modules/action_model/Hierarchical_ActionHead.py`](starVLA/model/modules/action_model/Hierarchical_ActionHead.py) | Low-level refiner: cross-attention DiT, SigLIP real-time observation encoder, compressed high-level features, temporal action context, masked refinement loss. |
-| [`examples/`](examples) | Two-stage training configs and evaluation scripts for LIBERO, LIBERO-Plus, and the PiperX real-robot tasks. |
-| [`scripts/benchmark_latency.py`](scripts/benchmark_latency.py) | Per-chunk latency benchmark for the hierarchical inference schedule. |
-
-<p align="center">
-  <img src="assets/refiner_architecture.png" width="90%" alt="Refiner architecture">
-</p>
-
-Where each part of the method lives in the code:
-
-- **Partial denoising** (training inputs for the refiner): `HierarchicalVLA._sample_lower_flow_path_t`,
-  `_build_lower_flow_path_input`, `_make_lower_flow_step_size`.
-- **Velocity target and masked loss**: target construction in `HierarchicalVLA`, loss in
-  `HierarchicalRefinerActionHead.forward`.
-- **Feature compression and temporal context**: `_build_condition_tokens`, `gather_temporal_chunk`,
-  `gather_temporal_context` in `Hierarchical_ActionHead.py`.
-- **Hierarchical inference with reuse**: `HierarchicalVLA.predict_action` → `_predict_chunk_online`;
-  the high-level trajectory is recomputed every `eval_num_chunks` (M) refinement cycles.
-
-Key configuration fields:
-
-| Symbol | Field | LIBERO setting |
-|---|---|---|
-| High-level horizon H | `framework.action_model.action_horizon` | 32 |
-| Refiner chunk size h | `framework.hierarchical_action_head.chunk_action_horizon` | 5 |
-| Temporal context k | `framework.hierarchical_action_head.temporal_context_extra` | 5 |
-| Reuse length M | `hierarchical_action_head.eval_num_chunks`, or `--hier_eval_num_chunks` at serving time | 4 |
-| Training denoising range | `top_plan_step_scale_{min,max}`, `lower_flow_path_mix_{min,max}_scale` | see config |
-| Inference hand-over progress α | `--denoise_step_scale` at serving time | 0.97 |
-
-`observation_indices` in a stage-2 config must equal the chunk start offsets
-(`arange(num_refine_chunks) * chunk_action_horizon`): the refiner picks its observation by chunk index.
-
 ## Installation
 
 ```bash
@@ -201,6 +164,12 @@ LIBERO_HOME=/path/to/LIBERO bash examples/LIBERO/eval_files/eval_libero_all.sh
 
 The server defaults follow the paper (α=0.97, M=4). To evaluate the high-level policy alone
 (the "Top-only" ablation), start the server with `hier_eval_mode=top32`.
+
+## Real-robot deployment and teleoperation
+
+<!-- TODO: robot client and teleoperation code -->
+The PiperX robot client and the teleoperation setup used to collect the real-robot datasets will
+be released under [`examples/PiperX/`](examples/PiperX/README.md). TODO.
 
 ## Checkpoints and datasets
 

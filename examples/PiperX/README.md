@@ -68,3 +68,9 @@ the control loop requests a new chunk and executes it at the task's control rate
 
 The PiperX control client (camera capture, inverse kinematics, safety limits, websocket client)
 will be added under [`deployment/`](deployment/). TODO.
+
+## 5. Teleoperation and data collection
+
+The teleoperation setup used to collect the real-robot demonstrations (Fruit25 was
+collected with VR teleoperation) will be added under
+[`teleoperation/`](teleoperation/). TODO.
