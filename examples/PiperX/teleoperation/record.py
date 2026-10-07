@@ -39,6 +39,7 @@ from examples.PiperX.common.robot import (  # noqa: E402
     PiperXRobotConfig,
     add_robot_args,
 )
+from examples.PiperX.teleoperation.console import Dashboard  # noqa: E402
 from examples.PiperX.teleoperation.dataset_writer import VIDEO_CODECS, LeRobotV3Writer  # noqa: E402
 from examples.PiperX.teleoperation.vr_server import VRServer  # noqa: E402
 from examples.PiperX.teleoperation.vr_teleop import PiperXVRTeleop, TeleopStep, VRTeleopConfig  # noqa: E402
@@ -55,7 +56,6 @@ HINTS = {
     "teleop": "Hold grip to move. Y: home. X: align (red X axis -> robot +X)",
 }
 TITLES = {"idle": "Idle", "homing": "Homing", "ready": "Ready", "recording": "Rec", "saving": "Saving", "stopped": "Done", "teleop": "Teleop"}
-ANSI_PHASE = {"idle": "100", "homing": "43", "ready": "42", "recording": "41", "saving": "44", "stopped": "44", "teleop": "42"}
 
 
 # ---------------------------------------------------------------------------- mock robot
@@ -153,7 +153,15 @@ class Keyboard:
 
 # ---------------------------------------------------------------------------- session
 class Session:
-    def __init__(self, args: argparse.Namespace, robot, teleop: PiperXVRTeleop, vr: VRServer, writer: LeRobotV3Writer | None):
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        robot,
+        teleop: PiperXVRTeleop,
+        vr: VRServer,
+        writer: LeRobotV3Writer | None,
+        dashboard: Dashboard,
+    ):
         self.args = args
         self.robot = robot
         self.teleop = teleop
@@ -173,7 +181,11 @@ class Session:
         self._control_error_t = 0.0
         self._last_deadman = False
         self._last_ik_ok = True
-        self.tty = sys.stdout.isatty()
+        self.dashboard = dashboard
+        self._feedback: np.ndarray | None = None
+        self._control_count = 0
+        self._rate_t = time.perf_counter()
+        self._rate_counts = (0, 0)
 
     # ------------------------------------------------------------------ control thread
     def control_loop(self) -> None:
@@ -189,6 +201,8 @@ class Session:
                     step = self.teleop.step(feedback, left, right)
                 self.robot.send_joint_command(step.command, step.speed_ratio)
                 self._step = step
+                self._feedback = feedback
+                self._control_count += 1
                 for name in step.events:
                     self.events.put(("vr", name))
                 if step.home_reached:
@@ -317,32 +331,48 @@ class Session:
     def publish_status(self) -> None:
         status = self.status()
         self.vr.publish(status)
-        if not self.tty:
-            return
-        flags = " ".join(
-            name for name, on in (("tracking", status["tracking"]), ("grip", status["deadman"]), ("closed", status["gripper_closed"])) if on
+        now = time.perf_counter()
+        dt = max(now - self._rate_t, 1e-3)
+        control_hz = (self._control_count - self._rate_counts[0]) / dt
+        headset_hz = (self.vr.packet_count - self._rate_counts[1]) / dt
+        self._rate_t, self._rate_counts = now, (self._control_count, self.vr.packet_count)
+        _, _, age = self.vr.latest()
+        feedback = self._feedback
+        ee_mm = None
+        if feedback is not None:
+            pos, _ = self.teleop.ik.kin.fk_pose_deg(feedback)
+            ee_mm = tuple(float(v) * 1000.0 for v in pos)
+        self.dashboard.update(
+            phase=self.phase,
+            elapsed_s=status["elapsed_s"],
+            frames=self.writer.episode_length if self.writer else 0,
+            episode=status["episode"],
+            saved=status["saved"],
+            target=self.args.num_episodes,
+            headset_connected=self.vr.num_clients > 0,
+            headset_hz=headset_hz,
+            headset_age_ms=age * 1000.0 if np.isfinite(age) else None,
+            control_hz=control_hz,
+            tracking=status["tracking"],
+            deadman=status["deadman"],
+            gripper_closed=status["gripper_closed"],
+            ik_ok=status["ik_ok"],
+            encoder_backlog=status["encoder_backlog"],
+            ee_mm=ee_mm,
+            joints_deg=[] if feedback is None else [float(v) for v in feedback[:6]],
+            gripper_mm=None if feedback is None else float(feedback[6]),
+            message=self.message,
         )
-        if not status["ik_ok"]:
-            flags += " \x1b[33mIK-unreachable\x1b[0m"
-        timer = f" {status['elapsed_s']:5.1f}s {self.writer.episode_length:4d}f" if status["elapsed_s"] is not None else ""
-        episode = f" ep {status['episode']} (saved {status['saved']}/{self.args.num_episodes})" if self.writer else ""
-        headset = "" if self.vr.num_clients else " \x1b[33mno headset\x1b[0m"
-        line = f"\x1b[{ANSI_PHASE[self.phase]};97m {status['title']:^8} \x1b[0m{timer}{episode} | {status['hint']} | {flags}{headset}"
-        sys.stdout.write("\r\x1b[2K" + line)
-        sys.stdout.flush()
 
     def log(self, text: str) -> None:
-        if self.tty:
-            sys.stdout.write("\r\x1b[2K" + text + "\n")
-            sys.stdout.flush()
-        else:
-            print(text, flush=True)
+        self.dashboard.log(text)
 
     # ------------------------------------------------------------------ main loop
     def run(self) -> None:
         control = threading.Thread(target=self.control_loop, name="control", daemon=True)
         control.start()
         self.keyboard.start()
+        self.dashboard.start()
         period = 1.0 / self.args.fps
         next_t = time.perf_counter()
         last_status_t = 0.0
@@ -375,8 +405,7 @@ class Session:
             self.keyboard.stop()
             self._stop.set()
             control.join(timeout=2.0)
-            if self.tty:
-                sys.stdout.write("\n")
+            self.dashboard.stop()
 
 
 # ---------------------------------------------------------------------------- main
@@ -453,11 +482,14 @@ def main() -> None:
     try:
         teleop.sync_to_robot(robot.read_joint_state())
         vr.start()
-        print(f"[VR] Open {vr.url} in the Quest browser (accept the certificate warning once), then press 'Enter VR'.")
-        if writer is not None:
-            print(f"[Dataset] {args.root}  ({writer.num_episodes} episodes so far, recording {args.num_episodes} more at {args.fps} Hz)")
-        print("[Keys] Space/-> = A   Backspace/<- = B   h = home   q/Esc = quit (saves an episode in progress)   Ctrl+C = abort")
-        Session(args, robot, teleop, vr, writer).run()
+        dashboard = Dashboard(
+            "PiperX VR teleop" + (" (simulated robot)" if args.mock_robot else ""),
+            vr.url,
+            f"{args.root} ({writer.num_episodes} episodes, {args.fps} Hz)" if writer is not None else None,
+            args.task,
+        )
+        dashboard.log(f"Headset: open {vr.url} in the Quest browser, then 'Start Controller Tracking'.")
+        Session(args, robot, teleop, vr, writer, dashboard).run()
     finally:
         vr.stop()
         if writer is not None:

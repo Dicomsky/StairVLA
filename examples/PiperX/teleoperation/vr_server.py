@@ -114,6 +114,7 @@ class VRServer:
         self._lock = threading.Lock()
         self._controllers: dict[str, ControllerState | None] = {"left": None, "right": None}
         self._last_packet_t = 0.0
+        self.packet_count = 0  # controller packets received (for the console's rate display)
         self._clients: set[Any] = set()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
@@ -209,6 +210,7 @@ class VRServer:
                     with self._lock:
                         self._controllers = {"left": left, "right": right}
                         self._last_packet_t = now
+                        self.packet_count += 1
         except Exception as exc:  # noqa: BLE001 - a dropped headset must not kill the server
             print(f"[VR] Headset connection closed: {exc}")
         finally:

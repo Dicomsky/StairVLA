@@ -54,8 +54,9 @@ python examples/PiperX/teleoperation/record.py \
 
 The same steps work from the robot PC keyboard: <kbd>Space</kbd>/<kbd>→</kbd> = A,
 <kbd>Backspace</kbd>/<kbd>←</kbd> = B, <kbd>h</kbd> = home. <kbd>q</kbd>/<kbd>Esc</kbd> quits and
-saves an episode in progress; <kbd>Ctrl+C</kbd> aborts and discards it. The terminal keeps a single
-status line updated.
+saves an episode in progress; <kbd>Ctrl+C</kbd> aborts and discards it. The terminal shows a live panel
+(phase, timer and frames, next button, headset rate and latency, control rate, grip/gripper/IK state,
+end-effector pose and joints) with timestamped events above it.
 
 To record several tasks into one dataset, run again with a new `--task` and `--resume`. Each
 episode stores its own instruction.
@@ -98,7 +99,8 @@ recomputes the actions from consecutive measured states (temporal EE deltas).
 
 | File | Purpose |
 |---|---|
-| `record.py` | entry point: control loop, episode state machine, terminal UI |
+| `record.py` | entry point: control loop, episode state machine |
+| `console.py` | live terminal dashboard |
 | `vr_teleop.py` | controller → EE target → IK joint target, slow homing |
 | `vr_mapping.py` | VR-to-robot frame mapping, filtering and speed limits |
 | `vr_server.py` | HTTPS + WebSocket server for the headset page |
