@@ -105,8 +105,7 @@ Calibration tells the program how the robot is oriented relative to you:
 To check the result, click the **right stick**: robot base axes appear above your left controller
 and should match the real robot.
 
-> [!WARNING]
-> If you walk out of the Quest's tracking area (its boundary), or the headset re-centers its view,
+> ⚠️ **Warning:** if you walk out of the Quest's tracking area (its boundary), or the headset re-centers its view,
 > the mapping can feel rotated afterwards and needs a **second calibration**. The page reconnects
 > automatically after a lost connection, and the hand position is re-anchored every time you squeeze
 > the grip, so usually nothing else is needed. If the motion ever feels wrong, just calibrate again.
