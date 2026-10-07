@@ -64,8 +64,14 @@ function setFlag(id, on, bad = false) {
   $(id).className = `flag${on ? ' on' : ''}${bad ? ' bad' : ''}`;
 }
 
+// Short hint on the right controller: step + next button (+ warning). Hidden while gripping.
+const NEXT = {
+  idle: 'A: move home', homing: 'moving home...  B: cancel', ready: 'A: start recording',
+  recording: 'A: save   B: discard', saving: 'saving...', stopped: 'done', teleop: 'grip: move',
+};
+
 function setStatusText(text, color) {
-  const el = $('statusText');
+  const el = $('rightHandHint');
   if (!el) return;
   el.setAttribute('value', text);
   el.setAttribute('color', color);
@@ -92,10 +98,10 @@ function renderStatus() {
   setFlag('flagIk', status.ik_ok !== false, status.ik_ok === false);
   $('flagGripper').textContent = status.gripper_closed ? 'Gripper closed' : 'Gripper open';
 
-  // Headset: one short status block below the line of sight.
-  const head = [title, recording ? formatTime(status.elapsed_s) : '', episode].filter(Boolean).join('   ');
+  // Headset: a short hint lying on the right controller (no text in front of the eyes).
+  const head = [recording ? `REC ${formatTime(status.elapsed_s)}` : title, episode].filter(Boolean).join('   ');
   const warn = warnings().join(' | ');
-  const lines = [head, status.hint || ''];
+  const lines = [head, NEXT[phase] || ''];
   if (warn) lines.push(warn);
   setStatusText(lines.join('\n'), recording ? '#ff5050' : warn ? '#ffb020' : '#ffffff');
 }
@@ -188,6 +194,10 @@ AFRAME.registerComponent('teleop-stream', {
     $('leftHandInfo').setAttribute('value', poseText(this.left.object3D));
     $('rightHandInfo').setAttribute('value', poseText(this.right.object3D));
     $('headsetInfo').setAttribute('value', poseText(this.head.object3D));
+    // Hide the hints while the right grip is held, i.e. while actually teleoperating.
+    const gripping = !!(right && right.buttons.squeeze);
+    $('leftHandHint').object3D.visible = !gripping;
+    $('rightHandHint').object3D.visible = !gripping;
     this.updateAids(left, right);
   },
   updateAids(left, right) {

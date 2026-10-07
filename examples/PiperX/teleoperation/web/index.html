@@ -61,15 +61,17 @@
     <a-scene id="scene" embedded vr-mode-ui="enabled: false" webxr="optionalFeatures: local-floor">
       <a-entity id="head" camera look-controls="enabled: false" wasd-controls="enabled: false">
         <a-text id="headsetInfo" value="Headset: ..." position="0 0.2 -0.5" scale="0.05 0.05 0.05" color="yellow" align="center"></a-text>
-        <a-text id="statusText" value="Connecting..." position="0 -0.16 -0.5" width="0.36" wrap-count="44" color="#ffffff" align="center" baseline="top"></a-text>
       </a-entity>
 
       <!-- Controller models with RGB (XYZ) axes and a Pos/Rot readout, as in XLeVR. -->
       <a-entity id="leftHand" oculus-touch-controls="hand: left">
         <a-text id="leftHandInfo" value="Pos: ..." position="0 0.04 -0.05" rotation="-90 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+        <!-- Hints lie flat beyond the readout; hidden while the right grip is held (teleoperating). -->
+        <a-text id="leftHandHint" value="Y: home   X: align" position="0 0.04 -0.09" rotation="-90 0 0" scale="0.05 0.05 0.05" color="#9fd3ff" align="center"></a-text>
       </a-entity>
       <a-entity id="rightHand" oculus-touch-controls="hand: right">
         <a-text id="rightHandInfo" value="Pos: ..." position="0 0.04 -0.05" rotation="-90 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+        <a-text id="rightHandHint" value="Connecting..." position="0 0.04 -0.095" rotation="-90 0 0" scale="0.05 0.05 0.05" color="#ffffff" align="center"></a-text>
       </a-entity>
 
       <!-- Optional alignment aids (right stick click): real gripper orientation and robot base axes. -->

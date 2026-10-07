@@ -33,8 +33,9 @@ python examples/PiperX/teleoperation/record.py \
 1. Open the printed `https://<robot-pc-ip>:8443` in the Quest browser. Accept the certificate
    warning once; the certificate is self-signed and stored in `~/.cache/stairvla/vr_tls/`.
 2. Press **Start Controller Tracking** (passthrough keeps the real robot visible). As in XLeVR, each
-   controller shows its model, RGB = XYZ axes and a Pos/Rot readout; the headset readout is at the top.
-   A short status line below your line of sight shows the current step, the next button and the episode.
+   controller shows its model, RGB = XYZ axes and a Pos/Rot readout. Nothing floats in front of you:
+   the current step and the next button are written on the right controller (red while recording),
+   `Y: home  X: align` on the left one, and both hide while you hold the grip.
 3. Run one episode:
 
    | Step | Press | What happens |
@@ -113,7 +114,7 @@ The shared IK, URDF and robot driver live in [`../common/`](../common). See
   view. All page assets (A-Frame, font, controller models) are bundled in `web/vendor/`, so only the LAN connection to
   the robot PC is needed.
 - **"Disconnected" on the page:** the robot PC firewall must allow TCP 8443.
-- **The arm does not move:** you must hold the right grip. Check that the status line says
+- **The arm does not move:** you must hold the right grip. Check that the hint on the right controller says
   *Ready* or *Recording* and not *Homing*.
 - **Motion feels rotated:** stand facing the robot, point the right controller along robot +X and
   press left X.
