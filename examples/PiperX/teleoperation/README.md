@@ -1,7 +1,5 @@
 # VR Teleoperation and Data Collection for the AgileX PiperX
 
-**[🌐 Project page](https://dicomsky.github.io/projects/stairvla)** · **[📄 Paper (arXiv)](https://arxiv.org/abs/2610.07756)** · part of [StairVLA](../../../README.md)
-
 <!-- Demo video: add the link here once it is published. -->
 
 We collected all PiperX demonstrations used in StairVLA with a **Meta Quest headset** through the
