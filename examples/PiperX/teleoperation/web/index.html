@@ -5,6 +5,8 @@
     <title>PiperX VR Teleoperation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
+    <!-- A-Frame and the assets it would fetch from its CDN (controller models, font) are bundled. -->
+    <script>window.AFRAME_CDN_ROOT = "vendor/cdn/";</script>
     <script src="vendor/aframe.min.js"></script>
     <script src="app.js" defer></script>
   </head>
@@ -50,48 +52,29 @@
           <tr><th>Right B</th><td>Discard the episode being recorded.</td></tr>
           <tr><th>Left Y</th><td>Slowly move the arm to the home pose.</td></tr>
           <tr><th>Left X</th><td>Align the frame: point the right controller's <b style="color:#ff5555">red X axis</b> toward robot +X (forward) and press.</td></tr>
-          <tr><th>Left stick click</th><td>Show / hide the button labels in the headset.</td></tr>
-          <tr><th>Right stick click</th><td>Show / hide the frame axes.</td></tr>
+          <tr><th>Right stick click</th><td>Show / hide the alignment aids: the real gripper's orientation (translucent axes at the right controller) and the robot base axes (above the left controller).</td></tr>
         </table>
         <p class="note">Keyboard on the robot PC: <kbd>Space</kbd>/<kbd>→</kbd> = A, <kbd>Backspace</kbd>/<kbd>←</kbd> = B, <kbd>h</kbd> = home, <kbd>q</kbd>/<kbd>Esc</kbd> = quit.</p>
       </section>
     </main>
 
-    <a-scene id="scene" embedded vr-mode-ui="enabled: false" renderer="colorManagement: true"
-             webxr="optionalFeatures: local-floor">
+    <a-scene id="scene" embedded vr-mode-ui="enabled: false" webxr="optionalFeatures: local-floor">
       <a-entity id="head" camera look-controls="enabled: false" wasd-controls="enabled: false">
-        <!-- Heads-up panel: slightly below eye level so it does not cover the workspace. -->
-        <a-entity id="hud" position="0 -0.2 -0.75" rotation="-12 0 0" visible="false">
-          <a-plane width="0.62" height="0.24" color="#11161c" opacity="0.78" material="shader: flat; transparent: true"></a-plane>
-          <a-plane id="hudPhaseBg" position="-0.215 0.083 0.001" width="0.17" height="0.048" color="#3b4754" material="shader: flat"></a-plane>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudPhase" value="IDLE" position="-0.215 0.083 0.002" align="center" width="0.55" color="#ffffff"></a-text>
-          <a-circle id="hudRec" position="0.27 0.083 0.002" radius="0.012" color="#ff3b30" material="shader: flat" visible="false"></a-circle>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudInfo" value="" position="0.235 0.083 0.002" align="right" width="0.5" color="#c9d1d9"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudHint" value="Connecting..." position="-0.29 0.02 0.002" align="left" width="0.82" color="#ffffff" wrap-count="34"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudTask" value="" position="-0.29 -0.05 0.002" align="left" width="0.5" color="#8b98a5" wrap-count="52"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="hudWarn" value="" position="-0.29 -0.095 0.002" align="left" width="0.5" color="#ffb020"></a-text>
-        </a-entity>
+        <a-text id="headsetInfo" value="Headset: ..." position="0 0.2 -0.5" scale="0.05 0.05 0.05" color="yellow" align="center"></a-text>
+        <a-text id="statusText" value="Connecting..." position="0 -0.16 -0.5" width="0.36" wrap-count="44" color="#ffffff" align="center" baseline="top"></a-text>
       </a-entity>
 
-      <!-- Axis triads (red X, green Y, blue Z) are added by app.js:
-           on each controller (controller frame), on the left controller (robot base frame as mapped),
-           and the gripper "ghost" that follows the right controller with the real gripper's orientation. -->
+      <!-- Controller models with RGB (XYZ) axes and a Pos/Rot readout, as in XLeVR. -->
+      <a-entity id="leftHand" oculus-touch-controls="hand: left">
+        <a-text id="leftHandInfo" value="Pos: ..." position="0 0.04 -0.05" rotation="-90 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+      </a-entity>
+      <a-entity id="rightHand" oculus-touch-controls="hand: right">
+        <a-text id="rightHandInfo" value="Pos: ..." position="0 0.04 -0.05" rotation="-90 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+      </a-entity>
+
+      <!-- Optional alignment aids (right stick click): real gripper orientation and robot base axes. -->
       <a-entity id="gripperGhost" visible="false"></a-entity>
       <a-entity id="robotFrame" visible="false"></a-entity>
-
-      <a-entity id="leftHand" oculus-touch-controls="hand: left; model: false">
-        <a-entity class="labels" position="0 0.11 -0.02" rotation="-30 0 0">
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="Y  home" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="X  align forward" position="0 0 0" align="center" width="0.14" color="#ffffff"></a-text>
-        </a-entity>
-      </a-entity>
-      <a-entity id="rightHand" oculus-touch-controls="hand: right; model: false">
-        <a-entity class="labels" position="0 0.11 -0.02" rotation="-30 0 0">
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="labelA" value="A  move home" position="0 0.032 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="B  discard" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
-          <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="grip: move   trigger: gripper" position="0 0 0" align="center" width="0.14" color="#8b98a5"></a-text>
-        </a-entity>
-      </a-entity>
     </a-scene>
   </body>
 </html>

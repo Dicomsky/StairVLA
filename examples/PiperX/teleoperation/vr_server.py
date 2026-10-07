@@ -26,6 +26,8 @@ from typing import Any
 import numpy as np
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
+mimetypes.add_type("model/gltf-binary", ".glb")
+mimetypes.add_type("model/gltf+json", ".gltf")
 DEFAULT_TLS_DIR = Path.home() / ".cache" / "stairvla" / "vr_tls"
 
 

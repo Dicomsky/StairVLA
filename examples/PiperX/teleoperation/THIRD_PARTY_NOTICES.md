@@ -31,5 +31,6 @@ SOFTWARE.
 The PiperX URDF in `../common/assets/piper_x_description/` comes from AgileX Robotics'
 `agx_arm_description` package (only the kinematic description is included; meshes are not).
 
-`web/vendor/` bundles A-Frame 1.7.1 (MIT, see `web/vendor/LICENSE-aframe`) and A-Frame's Roboto MSDF
-font (Roboto, Apache License 2.0); see `web/vendor/README.md`.
+`web/vendor/` bundles A-Frame 1.7.1 (MIT, see `web/vendor/LICENSE-aframe`) A-Frame's Roboto MSDF
+font (Roboto, Apache License 2.0) and the Meta Quest controller models from A-Frame's CDN;
+see `web/vendor/README.md`.
