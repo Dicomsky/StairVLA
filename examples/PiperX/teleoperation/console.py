@@ -30,7 +30,7 @@ NEXT = {
     "stopped": "all episodes recorded ·  q  quit",
     "teleop": "hold grip to move ·  Y  home ·  X  align frame",
 }
-KEYS = "Space/→ A · Backspace/← B · h home · q quit (saves) · Ctrl+C abort"
+KEYS = "Space/→ A · Backspace/← B · h home · p print pose · q quit (saves) · Ctrl+C abort"
 
 
 @dataclass

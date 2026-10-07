@@ -88,7 +88,54 @@ Then, in the headset:
 
 ---
 
-## 3. Controls
+## 3. Calibrate (takes 5 seconds)
+
+<p align="center"><img src="docs/calibration.svg" width="860" alt="PiperX base frame and calibration"></p>
+
+The PiperX base frame is **right-handed**: **X points forward** (away from the base), **Z points up**
+(to the sky), so **Y points to the robot's left**. In the headset every frame is drawn with the same
+colours: <b>X red</b>, <b>Y green</b>, <b>Z yellow</b>.
+
+Calibration only tells the program which way the robot's X points:
+
+1. Look at the axes drawn on your **right controller**. Turn the controller until its **red X
+   arrow points the same way as the robot's X** (forward), roughly level.
+2. Press **left X**. Done.
+
+From then on, moving your hand forward, left or up moves the gripper forward, left or up. Repeat
+whenever you change where you stand. To check the result, click the **right stick**: robot base
+axes appear above your left controller and should match the real robot.
+
+Calibration is not saved. It starts as "headset forward = robot forward" every time you launch.
+If you stand facing the robot's X direction, it is already correct.
+
+---
+
+## 4. Set your own home pose
+
+Every episode starts from the **home pose**: the arm moves there slowly (about 8°/s) before
+recording. The default is the pose used for our datasets:
+`0, 62.512, -66.452, 83, 0, 0` (joints 1–6 in degrees, gripper pointing down).
+
+To use your own:
+
+1. Start teleoperation: `python examples/PiperX/teleoperation/record.py --no-record`.
+2. Move the arm to the pose you want, then press **`p`** in the terminal. It prints a ready-to-use line:
+
+   ```
+   Current pose -> use as home with: --home-joints-deg 0.000 70.120 -60.330 85.000 0.000 0.000
+   ```
+
+3. Add that flag to every `record.py` command for this dataset. Pass the **same flag to the robot
+   client** (`deployment/eval_policy.py`, `deployment/eval_benchmark.py`), so that evaluation trials
+   start from the same pose as the training episodes.
+
+Choose a pose that sees the workspace in the wrist camera and leaves room in every direction. The
+arm moves there in a straight line in joint space, so keep the path clear.
+
+---
+
+## 5. Controls
 
 | Headset | Keyboard | Action |
 |---|---|---|
@@ -97,8 +144,9 @@ Then, in the headset:
 | **A** | `Space` / `→` | Next step: move home → start recording → save the episode. |
 | **B** | `Backspace` / `←` | Discard the episode being recorded (or cancel homing). |
 | **Left Y** | `h` | Move slowly to the home pose. |
-| **Left X** | | Align directions: point the right controller's **red X axis** at the robot's forward direction and press. |
+| **Left X** | | Calibrate: point the right controller's **red X arrow** like the robot's X (forward) and press ([§3](#3-calibrate-takes-5-seconds)). |
 | **Right stick click** | | Show or hide the alignment aids (see below). |
+| | `p` | Print the current joints as a `--home-joints-deg` line ([§4](#4-set-your-own-home-pose)). |
 | | `q` / `Esc` | Quit. An episode in progress is saved. |
 | | `Ctrl+C` | Abort. An episode in progress is discarded. |
 
@@ -112,7 +160,7 @@ Then, in the headset:
 
 **In the headset:**
 
-- Each controller shows its RGB = X/Y/Z axes and a `Pos / Rot` readout.
+- Each controller shows its axes (X red, Y green, Z yellow) and a `Pos / Rot` readout.
 - The right controller also shows the **current step and the next button**. The text turns red
   with a timer while recording, and orange if something needs attention.
 - Nothing is drawn in front of your eyes, and the hints disappear while you hold the grip.
@@ -133,7 +181,7 @@ end-effector pose. Events such as *Saved episode 3 (243 frames, 8.1 s)* scroll a
 
 ---
 
-## 4. What gets recorded
+## 6. What gets recorded
 
 Every frame, at **30 Hz**:
 
@@ -153,7 +201,7 @@ compatible with ours.
 
 ---
 
-## 5. From a recording to training data
+## 7. From a recording to training data
 
 Training uses **end-effector deltas** at a lower rate, not the recorded joint targets.
 The [dataset tools](../dataset_tools/README.md) compute them from the *measured* joint states:
@@ -191,7 +239,7 @@ To train on the result, see [`../README.md`](../README.md). The launchers write
 
 ---
 
-## 6. Share a dataset on Hugging Face
+## 8. Share a dataset on Hugging Face
 
 ```bash
 hf auth login                                       # once, with a token that has write access
@@ -221,7 +269,7 @@ ds = LeRobotDataset("<user>/<dataset-name>")
 
 ---
 
-## 7. Options
+## 9. Options
 
 | Option | Default | Meaning |
 |---|---|---|
@@ -234,13 +282,14 @@ ds = LeRobotDataset("<user>/<dataset-name>")
 | `--max-linear-speed` / `--max-angular-speed` | 350 mm/s / 160 °/s | limits on the end-effector target |
 | `--vr-timeout-s` | 0.5 | hold the arm if the headset stops sending |
 | `--vr-port` | 8443 | port of the page and the WebSocket |
-| `--can`, `--speed-ratio`, `--home-joints-deg` | `can0`, 100, paper home | robot settings |
+| `--home-joints-deg` | paper home | start pose of every episode ([§4](#4-set-your-own-home-pose)) |
+| `--can`, `--speed-ratio` | `can0`, 100 | robot settings |
 
 `python examples/PiperX/teleoperation/record.py --help` lists everything.
 
 ---
 
-## 8. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Fix |
 |---|---|
@@ -249,7 +298,7 @@ ds = LeRobotDataset("<user>/<dataset-name>")
 | The page says *Disconnected* | `record.py` is not running, or was restarted. The page reconnects automatically. |
 | `Port 8443 is already in use` | Another `record.py` is running. Stop it, or pass `--vr-port 8444`. |
 | The arm does not move | Hold the **right grip**. While homing, the arm ignores the controller. |
-| Moving forward moves the arm sideways | Point the red X axis of the right controller at robot +X and press **left X**. |
+| Moving forward moves the arm sideways | Calibrate: point the right controller's red X arrow like the robot's X and press **left X** ([§3](#3-calibrate-takes-5-seconds)). |
 | *target out of reach* (orange, vibration) | The target is outside the arm's workspace. Release the grip and come back. |
 | Terminal shows *control* well below 30 Hz | The CPU is overloaded or the IK keeps failing; close other programs. |
 | *video encoder falling behind* | Use `--vcodec h264`. |

@@ -114,7 +114,7 @@ class MockPiperXRobot:
 class Keyboard:
     """Single-key controls from the terminal (works over SSH; no X server needed)."""
 
-    KEYMAP = {" ": "A", "\n": "A", "\r": "A", "RIGHT": "A", "\x7f": "B", "\b": "B", "LEFT": "B", "h": "Y", "q": "QUIT", "ESC": "QUIT"}
+    KEYMAP = {" ": "A", "\n": "A", "\r": "A", "RIGHT": "A", "\x7f": "B", "\b": "B", "LEFT": "B", "h": "Y", "p": "POSE", "q": "QUIT", "ESC": "QUIT"}
 
     def __init__(self, events: queue.Queue):
         self.events = events
@@ -235,6 +235,10 @@ class Session:
             if self.phase == "recording":
                 self.save_episode()  # same as lerobot-record: stopping keeps the current episode
             self.running = False
+        elif button == "POSE":
+            feedback = self.robot.read_joint_state()
+            joints = " ".join(f"{v:.3f}" for v in feedback[:6])
+            self.log(f"Current pose -> use as home with: --home-joints-deg {joints}")
         elif button == "home_reached":
             if self.phase == "homing":
                 self.set_phase(self.after_home, "Home reached.")
