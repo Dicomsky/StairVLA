@@ -423,6 +423,36 @@ class PiperXRobot:
             self.is_connected = False
 
 
+def list_cameras() -> None:
+    """Print RealSense serial numbers and UVC capture devices (for --wrist-realsense-serial / --top-opencv-index)."""
+    from pathlib import Path
+
+    print("RealSense cameras (--wrist-realsense-serial):")
+    try:
+        import pyrealsense2 as rs
+
+        devices = list(rs.context().query_devices())
+        for dev in devices:
+            print(f"  {dev.get_info(rs.camera_info.serial_number)}   {dev.get_info(rs.camera_info.name)}")
+        if not devices:
+            print("  none found")
+    except ImportError:
+        print("  pyrealsense2 is not installed")
+
+    print("UVC cameras (--top-opencv-index):")
+    found = False
+    for node in sorted(Path("/sys/class/video4linux").glob("video*"), key=lambda p: int(p.name[5:])):
+        name = (node / "name").read_text().strip()
+        index_file = node / "index"
+        # Each camera exposes several nodes; the capture node has index 0. RealSense nodes are listed above.
+        if "RealSense" in name or (index_file.exists() and index_file.read_text().strip() != "0"):
+            continue
+        print(f"  {node.name[5:]:>3}   /dev/{node.name}   {name}")
+        found = True
+    if not found:
+        print("  none found")
+
+
 def limit_joint_step(target: np.ndarray, current_cmd: np.ndarray, max_joint_speed_deg_s: float, hz: float) -> np.ndarray:
     """Rate-limit the six joints of ``target`` relative to ``current_cmd``; the gripper is passed through."""
     if max_joint_speed_deg_s <= 0:

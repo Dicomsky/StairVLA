@@ -20,7 +20,7 @@ dataset. Three commands then turn a recording into the training data used in the
 | | |
 |---|---|
 | Robot | AgileX **PiperX** arm on a CAN interface (`can0`, 1 Mbit/s) |
-| Cameras | a **top** UVC camera and a **wrist** Intel RealSense, both 640×480 at 30 fps |
+| Cameras | a **top** UVC camera and a **wrist** Intel RealSense (we used an Innomaker U20CAM and a D435i), both 640×480 at 30 fps |
 | Headset | **Meta Quest** 2, 3 or Pro (we used a Quest 3) |
 | Robot PC | Linux, with the StairVLA environment; the Quest must be able to reach it over the network |
 
@@ -39,8 +39,18 @@ sudo ip link set can0 type can bitrate 1000000 && sudo ip link set can0 up
 sudo ufw allow 8443/tcp
 ```
 
-Find your RealSense serial number with `rs-enumerate-devices`. Find the top camera's `/dev/videoN`
-index with `v4l2-ctl --list-devices`.
+Find your camera settings:
+
+```bash
+python examples/PiperX/teleoperation/record.py --list-cameras
+```
+
+```
+RealSense cameras (--wrist-realsense-serial):
+  250122075719   RealSense D435I
+UVC cameras (--top-opencv-index):
+    0   /dev/video0   Innomaker-U20CAM-1080p-S1: Inno
+```
 
 ---
 

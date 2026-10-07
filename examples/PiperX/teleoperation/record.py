@@ -38,6 +38,7 @@ from examples.PiperX.common.robot import (  # noqa: E402
     PiperXRobot,
     PiperXRobotConfig,
     add_robot_args,
+    list_cameras,
 )
 from examples.PiperX.teleoperation.console import Dashboard  # noqa: E402
 from examples.PiperX.teleoperation.dataset_writer import VIDEO_CODECS, LeRobotV3Writer  # noqa: E402
@@ -434,12 +435,16 @@ def build_argparser() -> argparse.ArgumentParser:
     vr.add_argument("--home-joints-deg", nargs=6, type=float, default=DEFAULT_HOME_JOINTS_DEG)
 
     parser.add_argument("--mock-robot", action="store_true", help="No hardware: simulated arm and cameras (to try the VR setup).")
+    parser.add_argument("--list-cameras", action="store_true", help="Print RealSense serials and UVC camera indices, then exit.")
     add_robot_args(parser, speed_ratio=100, mode_refresh_interval_s=1.0)
     return parser
 
 
 def main() -> None:
     args = build_argparser().parse_args()
+    if args.list_cameras:
+        list_cameras()
+        return
     record = not args.no_record
     if record and (args.root is None or not args.task):
         raise SystemExit("--root and --task are required when recording (or pass --no-record).")
