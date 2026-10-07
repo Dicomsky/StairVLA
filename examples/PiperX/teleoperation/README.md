@@ -1,5 +1,7 @@
 # VR Teleoperation and Data Collection for the AgileX PiperX
 
+**[🌐 Project page](https://dicomsky.github.io/projects/stairvla)** · **[📄 Paper (arXiv)](https://arxiv.org/abs/2610.07756)** · part of [StairVLA](../../../README.md)
+
 <!-- Demo video: add the link here once it is published. -->
 
 We collected all PiperX demonstrations used in StairVLA with a **Meta Quest headset** through the
@@ -88,7 +90,7 @@ Then, in the headset:
 
 ---
 
-## 3. Calibrate (takes 5 seconds)
+## 3. Calibrate (one button press)
 
 <p align="center"><img src="docs/calibration.svg" width="860" alt="PiperX base frame and calibration"></p>
 
@@ -145,7 +147,7 @@ arm moves there in a straight line in joint space, so keep the path clear.
 | **A** | `Space` / `→` | Next step: move home → start recording → save the episode. |
 | **B** | `Backspace` / `←` | Discard the episode being recorded (or cancel homing). |
 | **Left Y** | `h` | Move slowly to the home pose. |
-| **Left X** | | Calibrate: hold the right controller so its X/Y/Z arrows match the robot's (forward/left/up) and press ([§3](#3-calibrate-takes-5-seconds)). |
+| **Left X** | | Calibrate: hold the right controller so its X/Y/Z arrows match the robot's (forward/left/up) and press ([§3](#3-calibrate-one-button-press)). |
 | **Right stick click** | | Show or hide the alignment aids (see below). |
 | | `p` | Print the current joints as a `--home-joints-deg` line ([§4](#4-set-your-own-home-pose)). |
 | | `q` / `Esc` | Quit. An episode in progress is saved. |
@@ -299,7 +301,7 @@ ds = LeRobotDataset("<user>/<dataset-name>")
 | The page says *Disconnected* | `record.py` is not running, or was restarted. The page reconnects automatically. |
 | `Port 8443 is already in use` | Another `record.py` is running. Stop it, or pass `--vr-port 8444`. |
 | The arm does not move | Hold the **right grip**. While homing, the arm ignores the controller. |
-| Moving forward moves the arm sideways | Calibrate: match the right controller's X/Y/Z arrows to the robot's and press **left X** ([§3](#3-calibrate-takes-5-seconds)). |
+| Moving forward moves the arm sideways | Calibrate: match the right controller's X/Y/Z arrows to the robot's and press **left X** ([§3](#3-calibrate-one-button-press)). |
 | *target out of reach* (orange, vibration) | The target is outside the arm's workspace. Release the grip and come back. |
 | Terminal shows *control* well below 30 Hz | The CPU is overloaded or the IK keeps failing; close other programs. |
 | *video encoder falling behind* | Use `--vcodec h264`. |
