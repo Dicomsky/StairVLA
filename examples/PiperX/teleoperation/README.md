@@ -1,123 +1,271 @@
-# PiperX VR teleoperation and data collection
+# VR Teleoperation and Data Collection for the AgileX PiperX
 
-This is the setup used to collect the PiperX demonstrations (Fruit25, PushBlock). A Meta Quest headset
-streams the right controller pose to the robot PC over WebXR. The pose is mapped to an end-effector
-target and solved with local IK, and the arm follows in joint space at 30 Hz. Each recorded frame
-stores the measured joint state, the commanded joint target and both camera images as a
-[LeRobot v3.0](https://github.com/huggingface/lerobot) dataset. The
-[dataset tools](../dataset_tools/README.md) then convert the recordings into the EE-delta datasets
-used for training.
+<!-- Demo video: add the link here once it is published. -->
 
-Everything runs in the StairVLA environment. The `lerobot` package is not required.
+We collected all PiperX demonstrations used in StairVLA with a **Meta Quest headset** through the
+browser (WebXR). You put on the headset, hold the right grip, and the arm follows your hand.
+Every episode is saved as a standard [LeRobot v3.0](https://github.com/huggingface/lerobot)
+dataset. Three commands then turn a recording into the training data used in the paper.
 
-## Setup
+- **No app to install on the headset.** Open a web page in the Quest browser and press one button.
+- **No internet needed.** The page and all of its assets are served by the robot PC over your LAN.
+- **No `lerobot` dependency.** Everything runs in the StairVLA Python environment.
+- **Same pipeline as the paper.** Fruit25 and PushBlock were recorded and processed with exactly
+  these tools.
 
-- **Hardware:** an AgileX PiperX on a CAN interface (`can0`), a top UVC camera and a wrist Intel
-  RealSense (both 640×480 @ 30 fps), and a Meta Quest 2, 3 or Pro on the same network as the robot PC.
-- **Packages:** `pip install -r examples/PiperX/requirements.txt`. You also need `openssl`, which
-  is used once to create the local HTTPS certificate.
-- **CAN:** bring the CAN interface up with the AgileX scripts, e.g. `bash can_activate.sh can0 1000000`.
-- **Cameras:** set `--wrist-realsense-serial` to your RealSense serial (`rs-enumerate-devices`)
-  and `--top-opencv-index` to the top camera's `/dev/videoN`.
+---
 
-## Record
+## 1. What you need
+
+| | |
+|---|---|
+| Robot | AgileX **PiperX** arm on a CAN interface (`can0`, 1 Mbit/s) |
+| Cameras | a **top** UVC camera and a **wrist** Intel RealSense, both 640×480 at 30 fps |
+| Headset | **Meta Quest** 2, 3 or Pro (we used a Quest 3) |
+| Robot PC | Linux, with the StairVLA environment; the Quest must be able to reach it over the network |
+
+Install the robot-side packages into the StairVLA environment:
+
+```bash
+cd StairVLA
+conda activate stairvla
+pip install -r examples/PiperX/requirements.txt   # piper_sdk, pyrealsense2, opencv-python, ...
+```
+
+Bring up the CAN bus (once per boot) and, if a firewall is active, open the port used by the headset:
+
+```bash
+sudo ip link set can0 type can bitrate 1000000 && sudo ip link set can0 up
+sudo ufw allow 8443/tcp
+```
+
+Find your RealSense serial number with `rs-enumerate-devices`. Find the top camera's `/dev/videoN`
+index with `v4l2-ctl --list-devices`.
+
+---
+
+## 2. Quick start
+
+**Try it without a robot.** A simulated arm and cameras let you check the headset setup first:
+
+```bash
+python examples/PiperX/teleoperation/record.py --mock-robot --no-record
+```
+
+**Teleoperate the real arm** (nothing is saved):
+
+```bash
+python examples/PiperX/teleoperation/record.py --no-record \
+    --wrist-realsense-serial <serial> --top-opencv-index 0
+```
+
+**Record a dataset:**
 
 ```bash
 python examples/PiperX/teleoperation/record.py \
-    --root data/piperx/MyTask_raw \
+    --root data/piperx/apple_to_basket \
     --task "Pick up the apple and place it in the red basket." \
     --num-episodes 50 \
     --wrist-realsense-serial <serial> --top-opencv-index 0
 ```
 
-1. Open the printed `https://<robot-pc-ip>:8443` in the Quest browser. Accept the certificate
-   warning once; the certificate is self-signed and stored in `~/.cache/stairvla/vr_tls/`.
-2. Press **Start Controller Tracking** (passthrough keeps the real robot visible). As in XLeVR, each
-   controller shows its model, RGB = XYZ axes and a Pos/Rot readout. Nothing floats in front of you:
-   the current step and the next button are written on the right controller (red while recording),
-   `Y: home  X: align` on the left one, and both hide while you hold the grip.
-3. Run one episode:
+Then, in the headset:
 
-   | Step | Press | What happens |
-   |---|---|---|
-   | Idle | **A** | The arm moves slowly to the home pose. Reset the scene meanwhile. |
-   | Ready | **A** | Recording starts (red dot and timer). |
-   | Recording | **A** / **B** | **A** saves the episode, **B** discards it so you can record it again. |
+1. Open the address printed in the terminal, e.g. `https://192.168.1.20:8443`, in the **Quest browser**.
+2. The first time, the browser warns about the certificate, because the robot PC created it for
+   itself. Choose **Advanced → Proceed**.
+3. Press **Start Controller Tracking**. Passthrough stays on, so you see the real robot.
 
-   While teleoperating, **hold the right grip** to move the arm. Release it to re-position your hand
-   (clutch). The **right trigger** closes the gripper. **Left Y** sends the arm home and **left X**
-   aligns the frame (point the right controller's red X axis at robot +X and press). Clicking the
-   **right stick** shows alignment aids: the real gripper's orientation as translucent axes at the
-   right controller (match your controller's axes to it) and the robot base axes above the left
-   controller. The controller vibrates when recording starts,
-   when an episode is saved or discarded, and when a target is out of reach.
+---
 
-The same steps work from the robot PC keyboard: <kbd>Space</kbd>/<kbd>→</kbd> = A,
-<kbd>Backspace</kbd>/<kbd>←</kbd> = B, <kbd>h</kbd> = home. <kbd>q</kbd>/<kbd>Esc</kbd> quits and
-saves an episode in progress; <kbd>Ctrl+C</kbd> aborts and discards it. The terminal shows a live panel
-(phase, timer and frames, next button, headset rate and latency, control rate, grip/gripper/IK state,
-end-effector pose and joints) with timestamped events above it.
+## 3. Controls
 
-To record several tasks into one dataset, run again with a new `--task` and `--resume`. Each
-episode stores its own instruction.
+| Headset | Keyboard | Action |
+|---|---|---|
+| **Right grip** (hold) | | Move the arm. Release to re-position your hand ("clutch"), then grip again. |
+| **Right trigger** | | Close the gripper while held. |
+| **A** | `Space` / `→` | Next step: move home → start recording → save the episode. |
+| **B** | `Backspace` / `←` | Discard the episode being recorded (or cancel homing). |
+| **Left Y** | `h` | Move slowly to the home pose. |
+| **Left X** | | Align directions: point the right controller's **red X axis** at the robot's forward direction and press. |
+| **Right stick click** | | Show or hide the alignment aids (see below). |
+| | `q` / `Esc` | Quit. An episode in progress is saved. |
+| | `Ctrl+C` | Abort. An episode in progress is discarded. |
 
-### Other modes
+**Recording an episode:**
 
-```bash
-# Teleoperate without recording (practice, checking the camera views)
-python examples/PiperX/teleoperation/record.py --no-record
-
-# No hardware at all: simulated arm and cameras, to try the headset setup and mapping
-python examples/PiperX/teleoperation/record.py --mock-robot --root /tmp/vr_test --task "test"
+```
+ IDLE ──A──► HOMING ──(arm reaches home)──► READY ──A──► RECORDING ──A──► saved ──► IDLE (next episode)
+ reset the     slow, ~8°/s                   adjust if      hold grip,     └──B──► discarded, record again
+ scene                                       needed         do the task
 ```
 
-## Recorded data
+**In the headset:**
+
+- Each controller shows its RGB = X/Y/Z axes and a `Pos / Rot` readout.
+- The right controller also shows the **current step and the next button**. The text turns red
+  with a timer while recording, and orange if something needs attention.
+- Nothing is drawn in front of your eyes, and the hints disappear while you hold the grip.
+- The controller **vibrates** when recording starts, when an episode is saved or discarded, and
+  when a target is out of reach.
+
+**Alignment aids** (right stick click):
+
+- **Gripper:** translucent axes at your right controller show the *real gripper's* current
+  orientation. Turn the controller until its axes overlap them; after that, rotating your hand
+  rotates the gripper the same way.
+- **Robot base:** axes above the left controller show where the program thinks the robot's +X, +Y
+  and +Z are. After pressing **left X**, they should match the real robot.
+
+**In the terminal**, a live panel shows the phase, the timer and frame count, the next button, the
+headset rate and latency, the control-loop rate, the grip, gripper and IK state, and the
+end-effector pose. Events such as *Saved episode 3 (243 frames, 8.1 s)* scroll above it.
+
+---
+
+## 4. What gets recorded
+
+Every frame, at **30 Hz**:
 
 | Key | Shape | Content |
 |---|---|---|
 | `observation.state` | 7 | measured joints 1–6 (deg) and gripper opening (mm) |
 | `action` | 7 | joint target sent to the arm (IK solution, deg) and gripper target (mm) |
-| `observation.images.top`, `observation.images.wrist` | 480×640×3 | AV1 video, 30 fps |
+| `observation.images.top` | 480×640×3 | top camera (AV1 video) |
+| `observation.images.wrist` | 480×640×3 | wrist camera (AV1 video) |
 
-The released raw datasets used the defaults: 30 Hz recording, `--speed-ratio 100`, high-follow
-mode, and home pose `0 62.512 -66.452 83 0 0` (deg). Do not change them if you want new data to be
-compatible. Training does not use these joint actions directly. `dataset_tools/convert_to_ee.py`
-recomputes the actions from consecutive measured states (temporal EE deltas).
+The task string is stored with each episode. To collect several tasks into one dataset, run again
+with a different `--task` and add `--resume`.
 
-## Useful options
+The paper's datasets used the defaults: speed ratio 100 with high-follow mode, homing at speed 2
+and 8°/s, and home pose `0, 62.512, -66.452, 83, 0, 0` (deg). Keep them if you want new data to be
+compatible with ours.
+
+---
+
+## 5. From a recording to training data
+
+Training uses **end-effector deltas** at a lower rate, not the recorded joint targets.
+The [dataset tools](../dataset_tools/README.md) compute them from the *measured* joint states:
+
+- **State (8D):** `[x, y, z, qx, qy, qz, qw, gripper_mm]`, the forward kinematics of the measured
+  joints, in the robot base frame.
+- **Action (7D):** the motion to the next frame.
+  - translation `p[t+1] − p[t]` (m, base frame)
+  - rotation `log(R[t]⁻¹ · R[t+1])` (rad, gripper frame)
+  - gripper opening at `t+1` (mm)
+- **Resampling** interpolates the state trajectory (slerp for rotation), then recomputes the actions
+  between the resampled states. Actions are never interpolated.
+
+```bash
+T=examples/PiperX/dataset_tools
+RAW=data/piperx/apple_to_basket
+
+# 1. joints -> end-effector states and actions (still 30 Hz, same episodes)
+python $T/convert_to_ee.py --src $RAW --dst ${RAW}_EE_30Hz
+
+# 2. resample to the control rate of your task (Fruit25: 8 Hz, PushBlock: 20 Hz)
+python $T/resample.py --src ${RAW}_EE_30Hz --dst ${RAW}_EE_8Hz --fps 8
+
+# 3. quality check: flags short, jerky or inconsistent episodes
+python $T/check_quality.py --dataset ${RAW}_EE_8Hz --out-dir ${RAW}_qc
+```
+
+To drop bad episodes, list them in an exclusion manifest (`check_quality.py --write-manifest`
+drafts one for you) and pass it to step 2 with `--exclusions manifest.json`. The
+[dataset tools README](../dataset_tools/README.md) explains the manifest and the exact commands
+that rebuild our released Fruit25 and PushBlock datasets.
+
+To train on the result, see [`../README.md`](../README.md). The launchers write
+`meta/modality.json` with `prepare_modality.py`.
+
+---
+
+## 6. Share a dataset on Hugging Face
+
+```bash
+hf auth login                                       # once, with a token that has write access
+
+hf upload <user>/<dataset-name> data/piperx/apple_to_basket_EE_8Hz . --repo-type dataset
+hf repo tag create <user>/<dataset-name> v3.0 --repo-type dataset
+```
+
+- The **`v3.0` tag is required.** `LeRobotDataset` refuses to load a Hub dataset that has no tag
+  matching its format version.
+- Add `--private` to the upload command to create a private repository.
+- For very large datasets, `hf upload-large-folder <user>/<dataset-name> <dir> --repo-type dataset`
+  resumes after interruptions.
+
+Anyone can then download it:
+
+```bash
+hf download <user>/<dataset-name> --repo-type dataset --local-dir playground/Datasets/<dataset-name>
+```
+
+or load it directly in Python:
+
+```python
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
+ds = LeRobotDataset("<user>/<dataset-name>")
+```
+
+---
+
+## 7. Options
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--scale` | 600 | robot mm per metre of controller motion |
-| `--max-linear-speed` / `--max-angular-speed` | 350 mm/s / 160 deg/s | per-step limits on the EE target |
-| `--vr-timeout-s` | 0.5 | hold the arm if the headset stops sending |
-| `--max-episode-s` | 0 (off) | auto-save after this duration |
+| `--root` / `--task` / `--num-episodes` | | dataset folder, instruction, episodes to record |
+| `--resume` | off | append to an existing dataset |
+| `--fps` | 30 | recording rate |
+| `--max-episode-s` | 0 (off) | save automatically after this many seconds |
 | `--vcodec` | `av1` | `h264` encodes faster on slow CPUs |
+| `--scale` | 600 | robot millimetres per metre of hand motion |
+| `--max-linear-speed` / `--max-angular-speed` | 350 mm/s / 160 °/s | limits on the end-effector target |
+| `--vr-timeout-s` | 0.5 | hold the arm if the headset stops sending |
 | `--vr-port` | 8443 | port of the page and the WebSocket |
+| `--can`, `--speed-ratio`, `--home-joints-deg` | `can0`, 100, paper home | robot settings |
 
-## Files
+`python examples/PiperX/teleoperation/record.py --help` lists everything.
+
+---
+
+## 8. Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| The page does not load in the headset | The Quest and the PC must be on networks that can reach each other. Open TCP 8443 in the firewall. |
+| "Start Controller Tracking" is greyed out | Open the page in the Quest browser itself, not in a cast or desktop view. |
+| The page says *Disconnected* | `record.py` is not running, or was restarted. The page reconnects automatically. |
+| `Port 8443 is already in use` | Another `record.py` is running. Stop it, or pass `--vr-port 8444`. |
+| The arm does not move | Hold the **right grip**. While homing, the arm ignores the controller. |
+| Moving forward moves the arm sideways | Point the red X axis of the right controller at robot +X and press **left X**. |
+| *target out of reach* (orange, vibration) | The target is outside the arm's workspace. Release the grip and come back. |
+| Terminal shows *control* well below 30 Hz | The CPU is overloaded or the IK keeps failing; close other programs. |
+| *video encoder falling behind* | Use `--vcodec h264`. |
+
+---
+
+## How it works
+
+```
+Quest browser (WebXR) ──wss://, ~70 Hz──►  vr_server.py ──► vr_teleop.py: hand pose → gripper pose → IK ──► PiperX (CAN, 30 Hz)
+        ▲  status, haptics                                                                                   │
+        └──────────────────────────────── record.py: episode steps, console ◄──── joints + top/wrist cameras ┘
+                                                     └──► dataset_writer.py → LeRobot v3.0 (parquet + AV1 video)
+```
 
 | File | Purpose |
 |---|---|
-| `record.py` | entry point: control loop, episode state machine |
-| `console.py` | live terminal dashboard |
-| `vr_teleop.py` | controller → EE target → IK joint target, slow homing |
-| `vr_mapping.py` | VR-to-robot frame mapping, filtering and speed limits |
-| `vr_server.py` | HTTPS + WebSocket server for the headset page |
-| `dataset_writer.py` | LeRobot v3.0 dataset writer (streams video while recording) |
-| `web/` | WebXR page (A-Frame, vendored in `web/vendor/`): controller axes and readouts, status line, haptics |
+| [`record.py`](record.py) | entry point: control loop, episode steps, recording |
+| [`vr_teleop.py`](vr_teleop.py) | hand pose → gripper target → joint target (local IK), slow homing |
+| [`vr_mapping.py`](vr_mapping.py) | headset-to-robot frame mapping, smoothing and speed limits |
+| [`vr_server.py`](vr_server.py) | HTTPS + WebSocket server for the headset page; creates the TLS certificate |
+| [`dataset_writer.py`](dataset_writer.py) | LeRobot v3.0 writer; encodes video while recording |
+| [`console.py`](console.py) | live terminal panel |
+| [`web/`](web/) | the WebXR page (A-Frame, bundled in `web/vendor/`) |
 
-The shared IK, URDF and robot driver live in [`../common/`](../common). See
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution.
-
-## Troubleshooting
-
-- **The page loads but "Start Controller Tracking" is disabled:** open it in the Quest browser itself, not a casting
-  view. All page assets (A-Frame, font, controller models) are bundled in `web/vendor/`, so only the LAN connection to
-  the robot PC is needed.
-- **"Disconnected" on the page:** the robot PC firewall must allow TCP 8443.
-- **The arm does not move:** you must hold the right grip. Check that the hint on the right controller says
-  *Ready* or *Recording* and not *Homing*.
-- **Motion feels rotated:** stand facing the robot, point the right controller along robot +X and
-  press left X.
-- **"video encoder falling behind":** use `--vcodec h264`.
+The inverse kinematics, the PiperX URDF and the CAN/camera driver are shared with the robot client in
+[`../common/`](../common/). The VR controller handling builds on
+[XLeVR](https://github.com/Vector-Wangel/XLeRobot) and [telegrip](https://github.com/DipFlip/telegrip);
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
