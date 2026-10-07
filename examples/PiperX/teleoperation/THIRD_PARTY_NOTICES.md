@@ -1,8 +1,8 @@
 # Third-party notices
 
-The VR controller handling in `web/app.js` and the controller-to-end-effector mapping in
-`vr_mapping.py` are adapted from XLeVR (part of XLeRobot), itself a refactor of
-[telegrip](https://github.com/DipFlip/telegrip):
+The controller-reading code and the in-headset controller view in `web/app.js` and `web/index.html`
+are adapted from XLeVR (part of [XLeRobot](https://github.com/Vector-Wangel/XLeRobot)), itself a
+refactor of [telegrip](https://github.com/DipFlip/telegrip):
 
 ```
 MIT License

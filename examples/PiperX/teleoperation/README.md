@@ -326,6 +326,15 @@ Quest browser (WebXR) ──wss://, ~70 Hz──►  vr_server.py ──► vr_t
 | [`web/`](web/) | the WebXR page (A-Frame, bundled in `web/vendor/`) |
 
 The inverse kinematics, the PiperX URDF and the CAN/camera driver are shared with the robot client in
-[`../common/`](../common/). The VR controller handling builds on
+[`../common/`](../common/). The controller-reading code of the headset page is adapted from
 [XLeVR](https://github.com/Vector-Wangel/XLeRobot) and [telegrip](https://github.com/DipFlip/telegrip);
 see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+## Acknowledgements
+
+This teleoperation setup was informed by ideas from [XLeRobot](https://github.com/Vector-Wangel/XLeRobot)
+(its XLeVR VR interface), [telegrip](https://github.com/DipFlip/telegrip),
+[LeRobot](https://github.com/huggingface/lerobot) and [Evo-RL](https://github.com/MINT-SJTU/Evo-RL).
+Recordings use the LeRobot v3.0 dataset format.
