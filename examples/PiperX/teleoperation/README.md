@@ -45,8 +45,10 @@ python examples/PiperX/teleoperation/record.py \
 
    While teleoperating, **hold the right grip** to move the arm. Release it to re-position your hand
    (clutch). The **right trigger** closes the gripper. **Left Y** sends the arm home and **left X**
-   aligns the frame (point the right controller at robot +X and press). Clicking the
-   **left stick** shows or hides the button labels. The controller vibrates when recording starts,
+   aligns the frame (point the right controller's red X axis at robot +X and press). Clicking the
+   **right stick** shows alignment aids: the real gripper's orientation as translucent axes at the
+   right controller (match your controller's axes to it) and the robot base axes above the left
+   controller. The controller vibrates when recording starts,
    when an episode is saved or discarded, and when a target is out of reach.
 
 The same steps work from the robot PC keyboard: <kbd>Space</kbd>/<kbd>→</kbd> = A,
@@ -107,11 +109,11 @@ The shared IK, URDF and robot driver live in [`../common/`](../common). See
 
 ## Troubleshooting
 
-- **The page loads but "Enter VR" is disabled:** open it in the Quest browser itself, not a casting
+- **The page loads but "Start Controller Tracking" is disabled:** open it in the Quest browser itself, not a casting
   view. All page assets (A-Frame, font, controller models) are bundled in `web/vendor/`, so only the LAN connection to
   the robot PC is needed.
 - **"Disconnected" on the page:** the robot PC firewall must allow TCP 8443.
-- **The arm does not move:** you must hold the right grip. Check that the status panel says
+- **The arm does not move:** you must hold the right grip. Check that the status line says
   *Ready* or *Recording* and not *Homing*.
 - **Motion feels rotated:** stand facing the robot, point the right controller along robot +X and
   press left X.
