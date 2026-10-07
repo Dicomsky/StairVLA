@@ -4,7 +4,7 @@
 
 Shangyuan Yuan<sup>1</sup>, Xinda Qi<sup>1,2</sup>, Yujiang Pu<sup>1</sup>, Wenliang Guo<sup>1</sup>, Xiaobo Tan<sup>1</sup>
 
-<sup>1</sup>Michigan State University &nbsp;&nbsp; <sup>2</sup>Ant Group
+<sup>1</sup>Michigan State University &nbsp;&nbsp; <sup>2</sup>Ant Technology U.S., Inc.
 
 [![Project Page](https://img.shields.io/badge/Project-Page-1f6feb.svg)](https://dicomsky.github.io/projects/stairvla)
 [![arXiv](https://img.shields.io/badge/arXiv-2610.07756-b31b1b.svg)](https://arxiv.org/abs/2610.07756)
