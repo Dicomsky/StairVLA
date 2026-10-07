@@ -273,6 +273,18 @@ class PiperXVRTeleop:
         self.command = np.asarray([*np.rad2deg(self._home_cmd_q), gripper_mm], dtype=np.float32)
         return False
 
+    def frames_in_vr(self, feedback: np.ndarray) -> tuple[list[float], list[float]]:
+        """Robot base frame and current gripper (link6) frame expressed in the WebXR frame.
+
+        Uses the same robot<->VR basis and yaw as the motion mapping, so what the headset draws is
+        exactly how controller motion is interpreted. Returns two [x, y, z, w] quaternions.
+        """
+        m = self.mapper
+        basis_vr_to_robot = np.array([[0.0, 0.0, -1.0], [m.y_sign, 0.0, 0.0], [0.0, m.z_sign, 0.0]])
+        robot_in_vr = R.from_euler("y", m.vr_yaw_deg, degrees=True).inv() * R.from_matrix(basis_vr_to_robot.T)
+        ee = R.from_matrix(self.ik.kin.fk(np.deg2rad(np.asarray(feedback[:6], dtype=float)))[:3, :3])
+        return robot_in_vr.as_quat().tolist(), (robot_in_vr * ee).as_quat().tolist()
+
     def home_remaining_deg(self, feedback: np.ndarray) -> float:
         return float(np.max(np.abs(np.asarray(self.cfg.home_joints_deg) - np.asarray(feedback[:6]))))
 

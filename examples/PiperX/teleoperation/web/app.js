@@ -155,10 +155,69 @@ function readController(handEl, hand) {
   };
 }
 
+
+// ----------------------------------------------------------------------------- frame axes
+// Red = X, green = Y, blue = Z everywhere. Letters always face the viewer.
+const AXES = [
+  { name: 'X', color: '#ff4040', rotation: '0 0 -90', dir: [1, 0, 0] },
+  { name: 'Y', color: '#40e040', rotation: '0 0 0', dir: [0, 1, 0] },
+  { name: 'Z', color: '#4080ff', rotation: '90 0 0', dir: [0, 0, 1] },
+];
+const FONT = 'font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png"';
+const billboards = [];
+let framesVisible = true;
+let lastRightStickPressed = false;
+
+function makeTriad(parent, { length = 0.07, radius = 0.0025, opacity = 1.0, prefix = '', caption = '' } = {}) {
+  const cone = length * 0.22;
+  const material = `shader: flat; transparent: ${opacity < 1}; opacity: ${opacity}`;
+  for (const axis of AXES) {
+    const [x, y, z] = axis.dir;
+    const shaft = length - cone;
+    parent.insertAdjacentHTML('beforeend', `
+      <a-cylinder position="${x * shaft / 2} ${y * shaft / 2} ${z * shaft / 2}" rotation="${axis.rotation}"
+                  height="${shaft}" radius="${radius}" color="${axis.color}" material="${material}"></a-cylinder>
+      <a-cone position="${x * (shaft + cone / 2)} ${y * (shaft + cone / 2)} ${z * (shaft + cone / 2)}" rotation="${axis.rotation}"
+              height="${cone}" radius-bottom="${radius * 3}" radius-top="0" color="${axis.color}" material="${material}"></a-cone>
+      <a-text class="axis-letter" ${FONT} value="${prefix}${axis.name}" align="center" width="${length * 2.2}" color="${axis.color}"
+              position="${x * (length + 0.012)} ${y * (length + 0.012)} ${z * (length + 0.012)}"></a-text>`);
+  }
+  if (caption) {
+    parent.insertAdjacentHTML('beforeend', `<a-text class="axis-letter" ${FONT} value="${caption}" align="center"
+      width="${length * 3}" color="#ffffff" position="0 ${-0.02} 0"></a-text>`);
+  }
+  parent.querySelectorAll('.axis-letter').forEach((el) => billboards.push(el));
+}
+
+function faceCamera(camera) {
+  // Keep axis letters readable: rotate each one to face the headset.
+  const THREE = AFRAME.THREE;
+  const camQ = new THREE.Quaternion();
+  const parentQ = new THREE.Quaternion();
+  camera.object3D.getWorldQuaternion(camQ);
+  for (const el of billboards) {
+    if (!el.object3D || !el.object3D.parent) continue;
+    el.object3D.parent.getWorldQuaternion(parentQ);
+    el.object3D.quaternion.copy(parentQ.invert().multiply(camQ));
+  }
+}
+
+function setQuaternion(el, q) {
+  if (q && q.length === 4) el.object3D.quaternion.set(q[0], q[1], q[2], q[3]);
+}
+
 AFRAME.registerComponent('teleop-stream', {
   init() {
     this.left = $('leftHand');
     this.right = $('rightHand');
+    this.head = $('head');
+    this.ghost = $('gripperGhost');
+    this.robotFrame = $('robotFrame');
+    // Controller frames (what you hold), the real gripper's orientation (ghost) and the robot base axes.
+    makeTriad(this.left, { length: 0.06 });
+    makeTriad(this.right, { length: 0.06 });
+    makeTriad(this.ghost, { length: 0.11, radius: 0.004, opacity: 0.45, caption: 'gripper' });
+    makeTriad(this.robotFrame, { length: 0.09, radius: 0.003, prefix: '+', caption: 'robot base' });
   },
   tick() {
     const left = readController(this.left, 'left');
@@ -168,7 +227,33 @@ AFRAME.registerComponent('teleop-stream', {
       if (stick && !lastStickPressed) { labelsVisible = !labelsVisible; updateLabelVisibility(); }
       lastStickPressed = stick;
     }
+    if (right) {
+      const stick = right.buttons.thumbstick;
+      if (stick && !lastRightStickPressed) framesVisible = !framesVisible;
+      lastRightStickPressed = stick;
+    }
     if (left || right) send({ type: 'controllers', t: Date.now(), left, right });
+    this.updateFrames(left, right);
+  },
+  updateFrames(left, right) {
+    const showGhost = framesVisible && !!right && !!status.gripper_frame_q;
+    const showRobot = framesVisible && !!left && !!status.robot_frame_q;
+    this.ghost.object3D.visible = showGhost;
+    this.robotFrame.object3D.visible = showRobot;
+    this.left.querySelectorAll('a-cylinder, a-cone, .axis-letter').forEach((el) => { el.object3D.visible = framesVisible; });
+    this.right.querySelectorAll('a-cylinder, a-cone, .axis-letter').forEach((el) => { el.object3D.visible = framesVisible; });
+    if (showGhost) {
+      // Same position as the right controller, orientation of the real gripper (link6) in this frame.
+      this.ghost.object3D.position.copy(this.right.object3D.position);
+      setQuaternion(this.ghost, status.gripper_frame_q);
+    }
+    if (showRobot) {
+      // Robot base axes as currently mapped (changes when you align with left X), above the left controller.
+      this.robotFrame.object3D.position.copy(this.left.object3D.position);
+      this.robotFrame.object3D.position.y += 0.08;
+      setQuaternion(this.robotFrame, status.robot_frame_q);
+    }
+    faceCamera(this.head);
   },
 });
 

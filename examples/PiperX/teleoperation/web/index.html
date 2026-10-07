@@ -49,8 +49,9 @@
           <tr><th>Right A</th><td>Next step: move home → start recording → save episode.</td></tr>
           <tr><th>Right B</th><td>Discard the episode being recorded.</td></tr>
           <tr><th>Left Y</th><td>Slowly move the arm to the home pose.</td></tr>
-          <tr><th>Left X</th><td>Point the right controller toward robot +X (forward) and press to align the frame.</td></tr>
+          <tr><th>Left X</th><td>Align the frame: point the right controller's <b style="color:#ff5555">red X axis</b> toward robot +X (forward) and press.</td></tr>
           <tr><th>Left stick click</th><td>Show / hide the button labels in the headset.</td></tr>
+          <tr><th>Right stick click</th><td>Show / hide the frame axes.</td></tr>
         </table>
         <p class="note">Keyboard on the robot PC: <kbd>Space</kbd>/<kbd>→</kbd> = A, <kbd>Backspace</kbd>/<kbd>←</kbd> = B, <kbd>h</kbd> = home, <kbd>q</kbd>/<kbd>Esc</kbd> = quit.</p>
       </section>
@@ -72,20 +73,20 @@
         </a-entity>
       </a-entity>
 
+      <!-- Axis triads (red X, green Y, blue Z) are added by app.js:
+           on each controller (controller frame), on the left controller (robot base frame as mapped),
+           and the gripper "ghost" that follows the right controller with the real gripper's orientation. -->
+      <a-entity id="gripperGhost" visible="false"></a-entity>
+      <a-entity id="robotFrame" visible="false"></a-entity>
+
       <a-entity id="leftHand" oculus-touch-controls="hand: left; model: false">
-        <!-- Local marker instead of the controller model (no CDN download): forward axis in blue. -->
-        <a-box width="0.025" height="0.015" depth="0.04" color="#c9d1d9" material="shader: flat"></a-box>
-        <a-cylinder position="0 0 -0.05" rotation="90 0 0" height="0.06" radius="0.002" color="#1f6feb" material="shader: flat"></a-cylinder>
-        <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
+        <a-entity class="labels" position="0 0.11 -0.02" rotation="-30 0 0">
           <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="Y  home" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
           <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="X  align forward" position="0 0 0" align="center" width="0.14" color="#ffffff"></a-text>
         </a-entity>
       </a-entity>
       <a-entity id="rightHand" oculus-touch-controls="hand: right; model: false">
-        <!-- Local marker instead of the controller model (no CDN download): forward axis in blue. -->
-        <a-box width="0.025" height="0.015" depth="0.04" color="#c9d1d9" material="shader: flat"></a-box>
-        <a-cylinder position="0 0 -0.05" rotation="90 0 0" height="0.06" radius="0.002" color="#1f6feb" material="shader: flat"></a-cylinder>
-        <a-entity class="labels" position="0 0.045 -0.02" rotation="-60 0 0">
+        <a-entity class="labels" position="0 0.11 -0.02" rotation="-30 0 0">
           <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" id="labelA" value="A  move home" position="0 0.032 0" align="center" width="0.14" color="#ffffff"></a-text>
           <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="B  discard" position="0 0.016 0" align="center" width="0.14" color="#ffffff"></a-text>
           <a-text font="vendor/Roboto-msdf.json" font-image="vendor/Roboto-msdf.png" value="grip: move   trigger: gripper" position="0 0 0" align="center" width="0.14" color="#8b98a5"></a-text>

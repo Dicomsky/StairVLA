@@ -132,10 +132,14 @@ class VRServer:
         if not self._ready.wait(timeout_s):
             raise RuntimeError("VR server did not start in time.")
         if self._error is not None:
+            if isinstance(self._error, OSError) and self._error.errno == 98:
+                raise RuntimeError(
+                    f"Port {self.port} is already in use (is another record.py running?). Stop it or pass --vr-port."
+                ) from self._error
             raise RuntimeError(f"VR server failed to start: {self._error}") from self._error
 
     def stop(self) -> None:
-        if self._loop is not None and self._stop is not None:
+        if self._loop is not None and self._stop is not None and not self._loop.is_closed():
             self._loop.call_soon_threadsafe(self._stop.set)
         if self._thread is not None:
             self._thread.join(timeout=3.0)

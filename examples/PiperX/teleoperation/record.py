@@ -48,11 +48,11 @@ ROBOT_TYPE = "piperx_follower"  # matches the released raw recordings
 HINTS = {
     "idle": "Reset the scene, then press A to move home",
     "homing": "Moving home... (B cancels)",
-    "ready": "Press A to start recording",
+    "ready": "Press A to start recording  (left X: align red X axis to robot +X)",
     "recording": "A save  |  B discard",
     "saving": "Saving episode...",
     "stopped": "All episodes recorded. Press q on the PC to quit.",
-    "teleop": "Hold grip to move. Y: home",
+    "teleop": "Hold grip to move. Y: home. X: align (red X axis -> robot +X)",
 }
 TITLES = {"idle": "Idle", "homing": "Homing", "ready": "Ready", "recording": "Rec", "saving": "Saving", "stopped": "Done", "teleop": "Teleop"}
 ANSI_PHASE = {"idle": "100", "homing": "43", "ready": "42", "recording": "41", "saving": "44", "stopped": "44", "teleop": "42"}
@@ -288,8 +288,10 @@ class Session:
         step = self._step
         elapsed = time.perf_counter() - self.record_start_t if self.phase == "recording" else None
         hint = HINTS[self.phase]
+        feedback = self.robot.read_joint_state()
         if self.phase == "homing" and step is not None:
-            hint = f"Moving home... {self.teleop.home_remaining_deg(self.robot.read_joint_state()):.0f} deg left (B cancels)"
+            hint = f"Moving home... {self.teleop.home_remaining_deg(feedback):.0f} deg left (B cancels)"
+        base_q, gripper_q = self.teleop.frames_in_vr(feedback)
         return {
             "type": "status",
             "phase": self.phase,
@@ -307,6 +309,9 @@ class Session:
             "ik_ok": bool(step is None or step.ik_ok),
             "encoder_backlog": self.writer.encoder_backlog if self.writer else 0,
             "message": self.message,
+            "robot_frame_q": base_q,
+            "gripper_frame_q": gripper_q,
+            "vr_yaw_deg": self.teleop.mapper.vr_yaw_deg,
         }
 
     def publish_status(self) -> None:
@@ -353,7 +358,7 @@ class Session:
                         self.log(f"Reached --max-episode-s={self.args.max_episode_s}; saving.")
                         self.save_episode()
                 now = time.perf_counter()
-                if now - last_status_t >= 0.2:
+                if now - last_status_t >= 0.1:
                     self.publish_status()
                     last_status_t = now
                 next_t += period
