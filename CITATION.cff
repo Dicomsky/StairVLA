@@ -36,6 +36,12 @@ preferred-citation:
     - given-names: Xiaobo
       family-names: Tan
   year: 2026
+  journal: arXiv preprint
+  url: 'https://arxiv.org/abs/2610.07756'
+  identifiers:
+    - type: other
+      value: 'arXiv:2610.07756'
+      description: arXiv identifier
 references:
   - type: software
     title: >-

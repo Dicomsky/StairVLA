@@ -6,7 +6,7 @@ Shangyuan Yuan<sup>1</sup>, Xinda Qi<sup>1,2</sup>, Yujiang Pu<sup>1</sup>, Wenl
 
 <sup>1</sup>Michigan State University &nbsp;&nbsp; <sup>2</sup>Ant Group
 
-[![arXiv](https://img.shields.io/badge/arXiv-TODO-b31b1b.svg)](#) <!-- TODO: arXiv link -->
+[![arXiv](https://img.shields.io/badge/arXiv-2610.07756-b31b1b.svg)](https://arxiv.org/abs/2610.07756)
 [![Checkpoints](https://img.shields.io/badge/🤗%20Checkpoints-coming%20soon-yellow)](#checkpoints-and-datasets)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -215,11 +215,14 @@ The PiperX code lives in [`examples/PiperX/`](examples/PiperX/README.md):
 ## Citation
 
 ```bibtex
-@article{yuan2026stairvla,
-  title   = {StairVLA: Stage-Aware Hierarchical Action Generation for Vision-Language-Action Models},
-  author  = {Yuan, Shangyuan and Qi, Xinda and Pu, Yujiang and Guo, Wenliang and Tan, Xiaobo},
-  journal = {arXiv preprint arXiv:TODO},
-  year    = {2026}
+@misc{yuan2026stairvla,
+  title         = {StairVLA: Stage-Aware Hierarchical Action Generation for Vision-Language-Action Models},
+  author        = {Yuan, Shangyuan and Qi, Xinda and Pu, Yujiang and Guo, Wenliang and Tan, Xiaobo},
+  year          = {2026},
+  eprint        = {2610.07756},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  url           = {https://arxiv.org/abs/2610.07756}
 }
 ```
 
