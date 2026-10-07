@@ -149,11 +149,11 @@ function poseText(object3D) {
 }
 
 // ----------------------------------------------------------------------------- axes
-// Red = X, green = Y, yellow = Z (sizes as in the original XLeVR indicators; yellow reads better than blue in passthrough).
+// Red = X, green = Y, blue = Z (same colours and sizes as the original XLeVR indicators).
 const AXES = [
   { color: '#ff0000', rotation: '0 0 -90', dir: [1, 0, 0] },
   { color: '#00ff00', rotation: '0 0 0', dir: [0, 1, 0] },
-  { color: '#ffd400', rotation: '90 0 0', dir: [0, 0, 1] },
+  { color: '#0000ff', rotation: '90 0 0', dir: [0, 0, 1] },
 ];
 
 function addAxes(parent, { length = 0.08, radius = 0.003, tip = 0.015, opacity = 1 } = {}) {

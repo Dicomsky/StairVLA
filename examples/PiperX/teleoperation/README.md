@@ -94,12 +94,12 @@ Then, in the headset:
 
 The PiperX base frame is **right-handed**: **X points forward** (away from the base), **Z points up**
 (to the sky), so **Y points to the robot's left**. In the headset every frame is drawn with the same
-colours: <b>X red</b>, <b>Y green</b>, <b>Z yellow</b>.
+colours: <b>X red</b>, <b>Y green</b>, <b>Z blue</b>.
 
-Calibration only tells the program which way the robot's X points:
+Calibration tells the program how the robot is oriented relative to you:
 
-1. Look at the axes drawn on your **right controller**. Turn the controller until its **red X
-   arrow points the same way as the robot's X** (forward), roughly level.
+1. Look at the axes drawn on your **right controller**. Turn the controller until **all three
+   arrows point like the robot's axes**: **red X forward**, **green Y left**, **blue Z up**.
 2. Press **left X**. Done.
 
 From then on, moving your hand forward, left or up moves the gripper forward, left or up. Repeat
@@ -144,7 +144,7 @@ arm moves there in a straight line in joint space, so keep the path clear.
 | **A** | `Space` / `→` | Next step: move home → start recording → save the episode. |
 | **B** | `Backspace` / `←` | Discard the episode being recorded (or cancel homing). |
 | **Left Y** | `h` | Move slowly to the home pose. |
-| **Left X** | | Calibrate: point the right controller's **red X arrow** like the robot's X (forward) and press ([§3](#3-calibrate-takes-5-seconds)). |
+| **Left X** | | Calibrate: hold the right controller so its X/Y/Z arrows match the robot's (forward/left/up) and press ([§3](#3-calibrate-takes-5-seconds)). |
 | **Right stick click** | | Show or hide the alignment aids (see below). |
 | | `p` | Print the current joints as a `--home-joints-deg` line ([§4](#4-set-your-own-home-pose)). |
 | | `q` / `Esc` | Quit. An episode in progress is saved. |
@@ -160,7 +160,7 @@ arm moves there in a straight line in joint space, so keep the path clear.
 
 **In the headset:**
 
-- Each controller shows its axes (X red, Y green, Z yellow) and a `Pos / Rot` readout.
+- Each controller shows its axes (X red, Y green, Z blue) and a `Pos / Rot` readout.
 - The right controller also shows the **current step and the next button**. The text turns red
   with a timer while recording, and orange if something needs attention.
 - Nothing is drawn in front of your eyes, and the hints disappear while you hold the grip.
@@ -298,7 +298,7 @@ ds = LeRobotDataset("<user>/<dataset-name>")
 | The page says *Disconnected* | `record.py` is not running, or was restarted. The page reconnects automatically. |
 | `Port 8443 is already in use` | Another `record.py` is running. Stop it, or pass `--vr-port 8444`. |
 | The arm does not move | Hold the **right grip**. While homing, the arm ignores the controller. |
-| Moving forward moves the arm sideways | Calibrate: point the right controller's red X arrow like the robot's X and press **left X** ([§3](#3-calibrate-takes-5-seconds)). |
+| Moving forward moves the arm sideways | Calibrate: match the right controller's X/Y/Z arrows to the robot's and press **left X** ([§3](#3-calibrate-takes-5-seconds)). |
 | *target out of reach* (orange, vibration) | The target is outside the arm's workspace. Release the grip and come back. |
 | Terminal shows *control* well below 30 Hz | The CPU is overloaded or the IK keeps failing; close other programs. |
 | *video encoder falling behind* | Use `--vcodec h264`. |

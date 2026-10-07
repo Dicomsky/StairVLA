@@ -2,7 +2,7 @@
   <defs>
     <marker id="hx" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e53935"/></marker>
     <marker id="hy" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e9d3a"/></marker>
-    <marker id="hz" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e6b800"/></marker>
+    <marker id="hz" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1e5bd8"/></marker>
     <marker id="hg" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
   </defs>
   <rect width="960" height="420" rx="14" fill="#ffffff"/>
@@ -22,16 +22,16 @@
   <!-- base axes at the base -->
   <circle cx="105" cy="300" r="5" fill="#222"/>
   <line x1="105" y1="300" x2="330" y2="300" stroke="#e53935" stroke-width="5" marker-end="url(#hx)"/>
-  <line x1="105" y1="300" x2="105" y2="80" stroke="#e6b800" stroke-width="5" marker-end="url(#hz)"/>
+  <line x1="105" y1="300" x2="105" y2="80" stroke="#1e5bd8" stroke-width="5" marker-end="url(#hz)"/>
   <line x1="105" y1="300" x2="175" y2="245" stroke="#2e9d3a" stroke-width="5" marker-end="url(#hy)"/>
   <text x="338" y="307" font-size="20" font-weight="bold" fill="#e53935">X</text>
   <text x="250" y="346" font-size="14" fill="#444" text-anchor="middle">forward (away from the base)</text>
-  <text x="96" y="70" font-size="20" font-weight="bold" fill="#b38f00">Z</text>
+  <text x="96" y="70" font-size="20" font-weight="bold" fill="#1e5bd8">Z</text>
   <text x="117" y="70" font-size="14" fill="#444">up (to the sky)</text>
   <text x="182" y="246" font-size="20" font-weight="bold" fill="#2e9d3a">Y</text>
   <text x="182" y="264" font-size="14" fill="#444">left (into the page)</text>
   <text x="30" y="372" font-size="15" fill="#333">Right-hand rule: X forward, Z up, so Y points to the robot's left.</text>
-  <text x="30" y="394" font-size="15" fill="#333">Colours everywhere: <tspan fill="#e53935" font-weight="bold">X red</tspan>, <tspan fill="#2e9d3a" font-weight="bold">Y green</tspan>, <tspan fill="#b38f00" font-weight="bold">Z yellow</tspan>.</text>
+  <text x="30" y="394" font-size="15" fill="#333">Colours everywhere: <tspan fill="#e53935" font-weight="bold">X red</tspan>, <tspan fill="#2e9d3a" font-weight="bold">Y green</tspan>, <tspan fill="#1e5bd8" font-weight="bold">Z blue</tspan>.</text>
 
   <!-- ===================== (b) calibration ===================== -->
   <text x="510" y="44" font-size="20" font-weight="bold" fill="#222">② Calibrate in the headset</text>
@@ -43,19 +43,23 @@
     <!-- controller axes -->
     <circle cx="0" cy="0" r="4" fill="#fff"/>
     <line x1="0" y1="0" x2="150" y2="0" stroke="#e53935" stroke-width="5" marker-end="url(#hx)"/>
-    <line x1="0" y1="0" x2="0" y2="-120" stroke="#e6b800" stroke-width="5" marker-end="url(#hz)"/>
+    <line x1="0" y1="0" x2="0" y2="-120" stroke="#1e5bd8" stroke-width="5" marker-end="url(#hz)"/>
     <line x1="0" y1="0" x2="48" y2="-38" stroke="#2e9d3a" stroke-width="5" marker-end="url(#hy)"/>
     <text x="158" y="7" font-size="20" font-weight="bold" fill="#e53935">X</text>
-    <text x="-8" y="-130" font-size="20" font-weight="bold" fill="#b38f00">Z</text>
+    <text x="-8" y="-130" font-size="20" font-weight="bold" fill="#1e5bd8">Z</text>
     <text x="54" y="-42" font-size="20" font-weight="bold" fill="#2e9d3a">Y</text>
   </g>
-  <!-- robot X reference -->
-  <line x1="600" y1="292" x2="750" y2="292" stroke="#555" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#hg)"/>
-  <text x="760" y="298" font-size="15" fill="#555">robot X (forward)</text>
-  <text x="760" y="252" font-size="14" fill="#555">⇕ same direction</text>
-
-  <text x="510" y="336" font-size="15" fill="#333"><tspan font-weight="bold">1.</tspan> Hold the right controller so its <tspan fill="#e53935" font-weight="bold">red X arrow</tspan> points where the</text>
-  <text x="528" y="356" font-size="15" fill="#333">robot's X points (forward, roughly level).</text>
-  <text x="510" y="380" font-size="15" fill="#333"><tspan font-weight="bold">2.</tspan> Press <tspan font-weight="bold">left X</tspan>. Done: moving your hand forward now moves</text>
-  <text x="528" y="400" font-size="15" fill="#333">the gripper forward.</text>
+  <!-- robot frame reference (dashed), same orientation as the controller axes -->
+  <g transform="translate(800 200)" stroke-dasharray="7 5">
+    <line x1="0" y1="0" x2="95" y2="0" stroke="#e53935" stroke-width="3" marker-end="url(#hx)"/>
+    <line x1="0" y1="0" x2="0" y2="-95" stroke="#1e5bd8" stroke-width="3" marker-end="url(#hz)"/>
+    <line x1="0" y1="0" x2="36" y2="-29" stroke="#2e9d3a" stroke-width="3" marker-end="url(#hy)"/>
+  </g>
+  <text x="800" y="228" font-size="14" fill="#555" text-anchor="middle">robot axes</text>
+  <text x="800" y="246" font-size="14" fill="#555" text-anchor="middle">(from ①)</text>
+  <text x="705" y="290" font-size="15" fill="#555" text-anchor="middle">controller axes  =  robot axes</text>
+  <text x="510" y="330" font-size="15" fill="#333"><tspan font-weight="bold">1.</tspan> Hold the right controller so its three arrows point</text>
+  <text x="528" y="350" font-size="15" fill="#333">like the robot's: <tspan fill="#e53935" font-weight="bold">X forward</tspan>, <tspan fill="#2e9d3a" font-weight="bold">Y left</tspan>, <tspan fill="#1e5bd8" font-weight="bold">Z up</tspan>.</text>
+  <text x="510" y="376" font-size="15" fill="#333"><tspan font-weight="bold">2.</tspan> Press <tspan font-weight="bold">left X</tspan>. Done: moving your hand forward now</text>
+  <text x="528" y="396" font-size="15" fill="#333">moves the gripper forward.</text>
 </svg>
