@@ -18,6 +18,7 @@ authors:
   - given-names: Xiaobo
     family-names: Tan
 repository-code: 'https://github.com/Dicomsky/StairVLA'
+url: 'https://dicomsky.github.io/projects/stairvla'
 license: MIT
 preferred-citation:
   type: article

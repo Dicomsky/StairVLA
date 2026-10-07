@@ -7,6 +7,7 @@ Shangyuan Yuan<sup>1</sup>, Xinda Qi<sup>1,2</sup>, Yujiang Pu<sup>1</sup>, Wenl
 <sup>1</sup>Michigan State University &nbsp;&nbsp; <sup>2</sup>Ant Group
 
 [![arXiv](https://img.shields.io/badge/arXiv-2610.07756-b31b1b.svg)](https://arxiv.org/abs/2610.07756)
+[![Project Page](https://img.shields.io/badge/Project-Page-1f6feb.svg)](https://dicomsky.github.io/projects/stairvla)
 [![Checkpoints](https://img.shields.io/badge/🤗%20Checkpoints-coming%20soon-yellow)](#checkpoints-and-datasets)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
