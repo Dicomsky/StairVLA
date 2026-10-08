@@ -291,6 +291,7 @@ def main() -> None:
         "--phase-video-fps", str(args.video_fps),
         "--phase-video-border-px", str(args.border_px),
         "--keep-all-recordings",
+        "--demo",
     ]
     if args.execute:
         benchmark_command.append("--execute")

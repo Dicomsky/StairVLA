@@ -122,7 +122,18 @@ def load_tasks(path: Path | None) -> list[str]:
     return [item.strip() for item in value]
 
 
-def read_attempt_label() -> str:
+def read_attempt_label(demo: bool = False) -> str:
+    if demo:
+        # Demonstration runs are kept with their videos but never scored.
+        while True:
+            value = input("Demo run done: [ENTER] next task / [r] run this task again / [q] quit: ").strip().lower()
+            if value in {"", "n", "next"}:
+                return "demo"
+            if value in {"r", "retry", "redo", "again"}:
+                return "retry"
+            if value in {"q", "quit", "exit"}:
+                return "quit"
+            print("Press ENTER, or type r or q.")
     while True:
         value = input(
             "Result: [s]uccess / [f]ailure / [r]etry same trial / [q]uit session: "
@@ -471,7 +482,7 @@ def run_attempt(
     if not home_info["home_success"]:
         recorder.close()
         print("[BENCHMARK] Home was not reached. This attempt cannot count as a policy result.")
-        label = "quit" if home_info["home_stop_reason"] == "user" else read_attempt_label()
+        label = "quit" if home_info["home_stop_reason"] == "user" else read_attempt_label(args.demo)
         return {
             "protocol_version": PROTOCOL_VERSION,
             "attempt_started_at": attempt_started_at,
@@ -759,7 +770,7 @@ def run_attempt(
     if stop_reason == "quit":
         label = "quit"
     else:
-        label = read_attempt_label()
+        label = read_attempt_label(args.demo)
 
     inference_array = np.asarray(inference_times_ms, dtype=np.float64)
     loop_array = np.asarray(loop_times_ms, dtype=np.float64)
@@ -978,7 +989,7 @@ def main() -> None:
                 safe_high,
                 ee_controller,
             )
-            if result["label"] in {"success", "failure"}:
+            if result["label"] in {"success", "failure", "demo"}:
                 result.pop("attempt_number", None)
                 append_jsonl(run_dir / "manifest.jsonl", result)
                 records.append(result)
@@ -1058,6 +1069,11 @@ def build_argparser() -> argparse.ArgumentParser:
         ),
     )
     group.add_argument("--start-trial", type=int, default=1, help="1-based valid trial number to start/resume from.")
+    group.add_argument(
+        "--demo",
+        action="store_true",
+        help="Demonstration runs: no success/failure question; runs are recorded but not scored.",
+    )
     group.add_argument("--resume-benchmark", action="store_true", help="Append to an existing --run-name.")
     group.add_argument("--record-video", action=argparse.BooleanOptionalAction, default=True)
     group.add_argument("--record-cameras", nargs="+", default=["top", "wrist"])

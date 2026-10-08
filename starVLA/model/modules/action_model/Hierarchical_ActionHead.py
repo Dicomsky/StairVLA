@@ -838,7 +838,16 @@ class HierarchicalRefinerActionHead(nn.Module):
         future_tokens = self.dit_future_tokens.weight.unsqueeze(0).expand(init_guess.shape[0], -1, -1)
         hidden_tokens = []
         if self.dit_state_proj is not None and state is not None:
-            hidden_tokens.append(self.dit_state_proj(state).unsqueeze(1))
+            # The robot client sends state as [B, 1, D]; training batches use [B, D].
+            state_tokens = self.dit_state_proj(state)
+            if state_tokens.ndim == 2:
+                state_tokens = state_tokens.unsqueeze(1)
+            elif state_tokens.ndim != 3 or state_tokens.shape[1] != 1:
+                raise ValueError(
+                    "Lower DiT state must have shape [B, D] or [B, 1, D], "
+                    f"got {tuple(state.shape)}"
+                )
+            hidden_tokens.append(state_tokens)
         hidden_tokens.extend([future_tokens, action_tokens])
         hidden_states = torch.cat(hidden_tokens, dim=1)
         if self.dit_position_embedding is not None:
