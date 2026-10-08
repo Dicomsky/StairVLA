@@ -164,6 +164,8 @@ playground/Datasets
 
 
 results
+# PiperX robot runs: evaluation results, benchmark and demo videos
+outputs/
 nohup.out
 *.out
 # scripts
