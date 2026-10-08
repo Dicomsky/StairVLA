@@ -953,6 +953,7 @@ def main() -> None:
     print("[BENCHMARK] Connected.")
 
     slot = args.start_trial - 1
+    demo_instructions: dict[int, str] = {}
     try:
         while slot < total_trials:
             task_index, repetition_index, instruction = schedule[slot]
@@ -972,6 +973,15 @@ def main() -> None:
             )
             print(f"[BENCHMARK] {instruction}")
             print("=" * 88)
+            if args.demo:
+                # Type any instruction for this run; ENTER keeps the planned task (or the one typed
+                # for this run before an 'r' retry).
+                default = demo_instructions.get(slot, instruction)
+                typed = input(f"Task [ENTER = {default}]: ").strip()
+                instruction = typed or default
+                demo_instructions[slot] = instruction
+                if typed:
+                    print(f"[BENCHMARK] Using typed task: {instruction}")
             base.reset_policy_cache(client, "benchmark_attempt_start", valid_trial_number, instruction)
             result = run_attempt(
                 client,
