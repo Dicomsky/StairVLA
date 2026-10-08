@@ -332,23 +332,50 @@ class PiperXRobot:
             raise
         self.is_connected = True
 
-    def _guard_ctrl_mode(self, timeout_s: float = 0.5) -> None:
-        """Refuse to drive an arm that is configured as a teaching/master arm."""
+    def _read_ctrl_mode(self, timeout_s: float = 0.5) -> int | None:
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             status = self.arm.GetArmStatus()
             if getattr(status, "time_stamp", 0.0) > 0.0:
                 mode = getattr(getattr(status, "arm_status", None), "ctrl_mode", None)
-                mode = int(getattr(mode, "value", mode)) if mode is not None else None
-                if mode in {PIPER_CTRL_MODE_TEACH, PIPER_CTRL_MODE_LINKAGE_TEACH_INPUT}:
-                    self.arm.MasterSlaveConfig(0xFC, 0x00, 0x00, 0x00)
-                    raise RuntimeError(
-                        f"[{self.config.can}] arm is in master/teaching role (ctrl_mode=0x{mode:02X}). "
-                        "The follower role command was sent; power-cycle the arm and retry."
-                    )
-                return
+                return int(getattr(mode, "value", mode)) if mode is not None else None
             time.sleep(0.02)
-        print(f"[PiperX] Warning: could not read ctrl_mode on {self.config.can}; check CAN wiring and power.")
+        return None
+
+    def _guard_ctrl_mode(self) -> None:
+        """Make sure the arm accepts CAN joint commands before driving it.
+
+        Drag-teach mode (0x02, entered with the teach button) is left automatically. A leader
+        ("teaching input") arm (0x06) is switched to the follower role, which only takes effect
+        after a power cycle.
+        """
+        mode = self._read_ctrl_mode()
+        if mode is None:
+            print(f"[PiperX] Warning: could not read ctrl_mode on {self.config.can}; check CAN wiring and power.")
+            return
+        if mode == PIPER_CTRL_MODE_TEACH:
+            print("[PiperX] Arm is in drag-teach mode (teach button); switching it to CAN control ...")
+            self.arm.MotionCtrl_1(0x00, 0x00, 0x02)  # end teach recording / leave drag-teach
+            time.sleep(0.2)
+            # Teaching mode persists until a control-mode command arrives; speed 0, motors not enabled yet.
+            self.arm.MotionCtrl_2(0x01, 0x01, 0, 0xAD if self.config.high_follow else 0x00)
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                time.sleep(0.1)
+                mode = self._read_ctrl_mode()
+                if mode != PIPER_CTRL_MODE_TEACH:
+                    print(f"[PiperX] Now in control mode 0x{(mode or 0):02X} (0x01 = CAN control).")
+                    return
+            raise RuntimeError(
+                f"[{self.config.can}] arm is still in drag-teach mode. Press the teach button once more "
+                "or power-cycle the arm, then retry."
+            )
+        if mode == PIPER_CTRL_MODE_LINKAGE_TEACH_INPUT:
+            self.arm.MasterSlaveConfig(0xFC, 0x00, 0x00, 0x00)
+            raise RuntimeError(
+                f"[{self.config.can}] arm is configured as a leader (teaching input) arm (ctrl_mode=0x06). "
+                "The follower role was set; power-cycle the arm and retry."
+            )
 
     def _enable(self) -> None:
         deadline = time.monotonic() + max(0.0, self.config.enable_timeout_s)
