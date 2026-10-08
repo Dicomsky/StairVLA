@@ -375,6 +375,7 @@ def start_debugpy_once():
     start_debugpy_once._started = True
 
 if __name__ == "__main__":
-    if os.getenv("DEBUG", False):
+    # Only an explicit DEBUG=1/true/yes/on starts debugpy (DEBUG=0 or an empty value must not block).
+    if os.getenv("DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
         start_debugpy_once()
     tyro.cli(eval_libero)
